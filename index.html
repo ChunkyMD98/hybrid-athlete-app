@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#07090d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HYBRID">
+<title>HYBRID</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#07090d; --bg2:#0d1117; --card:#141a23; --card2:#1b2330;
+  --line:#232d3b; --txt:#e8eef7; --dim:#8b97a8; --dim2:#5d6878;
+  --run:#ff5a1f; --str:#3d8bff; --hyb:#25d366; --warn:#ffc53d;
+  --r:18px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Inter,Roboto,sans-serif;
+  overscroll-behavior:none; -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;font-size:inherit}
+input,select{font-family:inherit;font-size:16px}
+::-webkit-scrollbar{width:0;height:0}
+
+/* ---------- shell ---------- */
+#app{max-width:520px;margin:0 auto;min-height:100%;position:relative;background:var(--bg)}
+#viewport{padding:0 0 108px;min-height:100vh}
+.view{padding:0 16px}
+
+/* ---------- page transitions ---------- */
+.fade-enter{animation:fadeIn .26s cubic-bezier(.22,.61,.36,1) both}
+.fade-exit{animation:fadeOut .16s ease-in both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:none}}
+@keyframes fadeOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-4px) scale(.995)}}
+
+/* ---------- header ---------- */
+.hd{padding:calc(env(safe-area-inset-top) + 18px) 16px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.hd h1{margin:0;font-size:28px;letter-spacing:-.6px;font-weight:800}
+.hd .sub{color:var(--dim);font-size:13px;margin-top:3px}
+.backbtn{display:inline-flex;align-items:center;gap:6px;color:var(--dim);font-size:15px;padding:6px 2px;font-weight:600}
+.backbtn:active{opacity:.6}
+
+/* ---------- cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.card.tap{transition:transform .12s ease,background .15s ease}
+.card.tap:active{transform:scale(.981);background:var(--card2)}
+.ctitle{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim2);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.big{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.muted{color:var(--dim);font-size:13px}
+.tiny{color:var(--dim2);font-size:11px}
+.chev{color:var(--dim2);font-size:20px;line-height:1}
+
+/* ---------- rings ---------- */
+.ring{position:relative;display:grid;place-items:center}
+.ring svg{transform:rotate(-90deg)}
+.ring .rin{position:absolute;text-align:center;line-height:1.1}
+.ring .rin b{display:block;font-size:22px;font-weight:800;letter-spacing:-.5px}
+.ring .rin span{font-size:9px;letter-spacing:1.1px;color:var(--dim2);text-transform:uppercase;font-weight:700}
+
+/* ---------- bars ---------- */
+.bar{height:7px;border-radius:99px;background:#212a37;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.22,.61,.36,1)}
+
+/* ---------- tab bar (text only) ---------- */
+#tabs{position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(9,12,17,.93);backdrop-filter:blur(18px);
+  border-top:1px solid var(--line);display:flex;padding:9px 6px calc(env(safe-area-inset-bottom) + 9px);max-width:520px;margin:0 auto}
+#tabs button{flex:1;padding:9px 2px;font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--dim2);
+  border-radius:11px;transition:color .2s ease,background .2s ease}
+#tabs button.on{color:var(--txt);background:#1a2230}
+
+/* ---------- FAB ---------- */
+#fab{position:fixed;right:calc(50% - 260px + 18px);bottom:calc(env(safe-area-inset-bottom) + 78px);z-index:61;
+  width:56px;height:56px;border-radius:50%;background:linear-gradient(140deg,var(--run),#ff8a3d);
+  color:#fff;font-size:30px;font-weight:300;display:grid;place-items:center;
+  box-shadow:0 10px 26px rgba(255,90,31,.4);transition:transform .14s ease}
+#fab:active{transform:scale(.9)}
+@media(max-width:556px){#fab{right:18px}}
+
+/* ---------- buttons ---------- */
+.btn{display:block;width:100%;padding:15px;border-radius:14px;font-weight:700;font-size:15px;text-align:center;transition:transform .12s ease,opacity .15s}
+.btn:active{transform:scale(.98)}
+.btn.p{background:var(--run);color:#fff}
+.btn.b{background:var(--str);color:#fff}
+.btn.g{background:#1e2733;color:var(--txt);border:1px solid var(--line)}
+.btn.ghost{background:none;color:var(--dim);border:1px dashed var(--line)}
+.btn[disabled]{opacity:.4}
+.btn.sm{padding:11px;font-size:14px}
+.hstack{display:flex;gap:10px}
+.hstack>*{flex:1}
+
+/* ---------- inputs ---------- */
+.fld{width:100%;padding:14px;border-radius:12px;background:#101722;border:1px solid var(--line);color:var(--txt);outline:none}
+.fld:focus{border-color:var(--str)}
+label.lb{display:block;font-size:12px;color:var(--dim);margin:0 0 6px 2px;font-weight:600}
+.opt{padding:15px;border-radius:14px;background:#101722;border:1.5px solid var(--line);margin-bottom:9px;transition:.16s;text-align:left;width:100%}
+.opt.sel{border-color:var(--run);background:#1d1512}
+.opt b{display:block;font-size:15px}
+.opt span{color:var(--dim);font-size:12.5px}
+
+/* ---------- list rows ---------- */
+.lrow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .nm{flex:1;min-width:0}
+.lrow .nm b{display:block;font-size:14.5px;font-weight:650}
+.lvpill{font-size:11px;font-weight:800;padding:4px 9px;border-radius:99px;background:#1e2733;color:var(--dim);white-space:nowrap}
+.lvpill.s{background:rgba(61,139,255,.16);color:#7fb2ff}
+.lvpill.r{background:rgba(255,90,31,.16);color:#ff9463}
+
+/* ---------- sheet / modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100;opacity:0;animation:sIn .2s forwards;backdrop-filter:blur(2px)}
+@keyframes sIn{to{opacity:1}}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:101;max-width:520px;margin:0 auto;background:var(--bg2);
+  border-radius:24px 24px 0 0;border-top:1px solid var(--line);padding:8px 16px calc(env(safe-area-inset-bottom) + 20px);
+  max-height:88vh;overflow-y:auto;transform:translateY(100%);animation:up .3s cubic-bezier(.22,.61,.36,1) forwards}
+@keyframes up{to{transform:none}}
+.grab{width:38px;height:4px;border-radius:9px;background:#2c3747;margin:8px auto 14px}
+.sheet h3{margin:0 0 14px;font-size:19px;letter-spacing:-.3px}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 16px);transform:translateX(-50%);z-index:200;width:min(440px,92vw)}
+.tst{background:linear-gradient(135deg,#1d2735,#141c27);border:1px solid #33415a;border-radius:15px;padding:13px 16px;margin-bottom:8px;
+  box-shadow:0 14px 34px rgba(0,0,0,.5);animation:tIn .32s cubic-bezier(.22,.61,.36,1)}
+@keyframes tIn{from{opacity:0;transform:translateY(-16px) scale(.96)}to{opacity:1;transform:none}}
+.tst b{font-size:14.5px}.tst div{color:var(--dim);font-size:12.5px;margin-top:2px}
+
+/* ---------- home edit mode ---------- */
+.wrap-w{position:relative}
+body.editing .wgt{animation:jig .34s infinite;transform-origin:50% 50%}
+body.editing .wgt:nth-child(even){animation-delay:-.17s}
+@keyframes jig{0%{transform:rotate(-.55deg)}50%{transform:rotate(.55deg)}100%{transform:rotate(-.55deg)}}
+.wgt{position:relative}
+.wgt .rm{position:absolute;top:-7px;left:-7px;width:26px;height:26px;border-radius:50%;background:#e5484d;color:#fff;
+  font-size:17px;line-height:1;display:none;place-items:center;z-index:5;box-shadow:0 3px 10px rgba(0,0,0,.5);font-weight:600}
+body.editing .wgt .rm{display:grid}
+body.editing .wgt .card{pointer-events:none}
+.wgt.drag{opacity:.9;z-index:50;animation:none!important;transform:scale(1.035);
+  box-shadow:0 22px 44px rgba(0,0,0,.6);border-radius:var(--r);position:relative}
+.wgt.slide{transition:transform .22s cubic-bezier(.22,.61,.36,1)}
+.editbar{display:flex;gap:9px;margin-bottom:12px}
+.gal{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:14px;margin-bottom:9px;background:var(--card);width:100%;text-align:left}
+.gal b{display:block;font-size:14.5px}
+.gal span{color:var(--dim);font-size:12px}
+.gal .add{color:var(--hyb);font-size:22px;font-weight:300}
+
+/* ---------- misc ---------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px}
+.stat b{display:block;font-size:23px;font-weight:800;letter-spacing:-.7px}
+.stat span{font-size:10.5px;color:var(--dim2);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.seg{display:flex;background:#101722;border-radius:12px;padding:3px;margin-bottom:14px;border:1px solid var(--line)}
+.seg button{flex:1;padding:9px;font-size:12.5px;font-weight:700;border-radius:9px;color:var(--dim2);transition:.16s}
+.seg button.on{background:#232e3d;color:var(--txt)}
+.spark{display:flex;align-items:flex-end;gap:5px;height:74px;margin:6px 0 4px}
+.spark div{flex:1;border-radius:4px 4px 2px 2px;background:#233043;min-height:3px;transition:height .4s}
+.empty{text-align:center;color:var(--dim2);padding:34px 12px;font-size:13.5px;line-height:1.55}
+.chip{display:inline-block;padding:4px 10px;border-radius:99px;background:#1b2431;font-size:11px;color:var(--dim);font-weight:600;margin:0 5px 5px 0}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.setrow{display:grid;grid-template-columns:30px 1fr 1fr 42px;gap:8px;align-items:center;margin-bottom:8px}
+.setrow input{padding:11px;text-align:center;border-radius:10px;background:#101722;border:1px solid var(--line);color:var(--txt);outline:none;width:100%}
+.setrow .n{color:var(--dim2);font-size:12px;font-weight:700;text-align:center}
+.chk{width:42px;height:38px;border-radius:10px;background:#1a2331;display:grid;place-items:center;font-size:16px;color:var(--dim2);border:1px solid var(--line)}
+.chk.on{background:rgba(37,211,102,.18);border-color:rgba(37,211,102,.4);color:var(--hyb)}
+.srch{position:sticky;top:0;background:var(--bg2);padding:2px 0 10px;z-index:2}
+.mvitem{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.hr{height:1px;background:var(--line);margin:14px 0}
+.lock{background:#191f2b;border:1px dashed #2e3a4c;border-radius:14px;padding:15px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="viewport"></div>
+</div>
+<nav id="tabs"></nav>
+<button id="fab">+</button>
+<div id="toast"></div>
+<div id="layer"></div>
+<script>
+/* ============================================================
+   HYBRID v2 — hybrid athlete tracker
+   Single-file vanilla JS. State in localStorage key hybrid_v2.
+   ============================================================ */
+"use strict";
+
+/* ---------------- MOVEMENT LIBRARY ---------------- */
+const GROUPS = ["Chest","Back","Legs","Shoulders","Arms","Core"];
+const LIB = [
+  // Chest
+  ["Bench Press (Barbell)","Chest",0],["Incline Bench Press (Barbell)","Chest",0],
+  ["Bench Press (Dumbbell)","Chest",0],["Incline Press (Dumbbell)","Chest",0],
+  ["Chest Fly (Dumbbell)","Chest",0],["Cable Fly","Chest",0],
+  ["Chest Press (Machine)","Chest",0],["Push-Up","Chest",1],["Dip (Chest)","Chest",1],
+  // Back
+  ["Deadlift (Barbell)","Back",0],["Sumo Deadlift","Back",0],["Rack Pull","Back",0],
+  ["Bent-Over Row (Barbell)","Back",0],["Pendlay Row","Back",0],["Row (Dumbbell)","Back",0],
+  ["Pull-Up","Back",1],["Chin-Up","Back",1],["Lat Pulldown","Back",0],
+  ["Seated Cable Row","Back",0],["T-Bar Row","Back",0],["Face Pull","Back",0],
+  // Legs
+  ["Back Squat","Legs",0],["Front Squat","Legs",0],["Goblet Squat","Legs",0],
+  ["Leg Press","Legs",0],["Hack Squat","Legs",0],["Romanian Deadlift","Legs",0],
+  ["Bulgarian Split Squat","Legs",0],["Walking Lunge","Legs",0],["Step-Up","Legs",0],
+  ["Leg Extension","Legs",0],["Leg Curl","Legs",0],["Hip Thrust","Legs",0],
+  ["Calf Raise","Legs",0],["Nordic Curl","Legs",1],
+  // Shoulders
+  ["Overhead Press (Barbell)","Shoulders",0],["Shoulder Press (Dumbbell)","Shoulders",0],
+  ["Arnold Press","Shoulders",0],["Push Press","Shoulders",0],["Lateral Raise","Shoulders",0],
+  ["Front Raise","Shoulders",0],["Rear Delt Fly","Shoulders",0],["Shrug","Shoulders",0],
+  // Arms
+  ["Barbell Curl","Arms",0],["Dumbbell Curl","Arms",0],["Hammer Curl","Arms",0],
+  ["Preacher Curl","Arms",0],["Cable Curl","Arms",0],["Incline Curl","Arms",0],
+  ["Tricep Pushdown","Arms",0],["Overhead Tricep Extension","Arms",0],
+  ["Skullcrusher","Arms",0],["Close-Grip Bench Press","Arms",0],
+  ["Tricep Dip","Arms",1],["Tricep Kickback","Arms",0],
+  // Core
+  ["Hanging Leg Raise","Core",1],["Cable Crunch","Core",0],["Ab Wheel Rollout","Core",1],
+  ["Russian Twist","Core",0],["Decline Sit-Up","Core",1],["Weighted Plank","Core",0],
+  ["Farmer's Carry","Core",0],
+
+  /* ---- expanded library ---- */
+  // Chest
+  ["Decline Bench Press (Barbell)","Chest",0],["Machine Chest Fly (Pec Deck)","Chest",0],
+  ["Cable Crossover","Chest",0],["Low-to-High Cable Fly","Chest",0],["Incline Cable Fly","Chest",0],
+  ["Smith Machine Bench Press","Chest",0],["Landmine Press","Chest",0],["Svend Press","Chest",0],
+  ["Dumbbell Pullover","Chest",0],["Floor Press","Chest",0],["Guillotine Press","Chest",0],
+  ["Deficit Push-Up","Chest",1],["Archer Push-Up","Chest",1],
+  // Back
+  ["Trap Bar Deadlift","Back",0],["Snatch-Grip Deadlift","Back",0],["Deficit Deadlift","Back",0],
+  ["Chest-Supported Row (Machine)","Back",0],["Meadows Row","Back",0],["Kroc Row","Back",0],
+  ["Seal Row","Back",0],["Inverted Row","Back",1],["Straight-Arm Pulldown","Back",0],
+  ["Single-Arm Lat Pulldown","Back",0],["Machine Row","Back",0],["Good Morning","Back",0],
+  ["Back Extension","Back",1],["Wide-Grip Pull-Up","Back",1],["Neutral-Grip Pull-Up","Back",1],
+  // Legs
+  ["Sumo Squat","Legs",0],["Box Squat","Legs",0],["Belt Squat","Legs",0],
+  ["Smith Machine Squat","Legs",0],["Pause Squat","Legs",0],["Zercher Squat","Legs",0],
+  ["Reverse Lunge","Legs",0],["Curtsy Lunge","Legs",0],["Cossack Squat","Legs",1],
+  ["Pistol Squat","Legs",1],["Sissy Squat","Legs",1],["Seated Leg Curl","Legs",0],
+  ["Standing Calf Raise","Legs",0],["Seated Calf Raise","Legs",0],["Adductor Machine","Legs",0],
+  ["Abductor Machine","Legs",0],["Glute Kickback (Cable)","Legs",0],["Single-Leg RDL","Legs",0],
+  ["Sled Push","Legs",0],
+  // Shoulders
+  ["Machine Shoulder Press","Shoulders",0],["Cable Lateral Raise","Shoulders",0],
+  ["Upright Row","Shoulders",0],["Reverse Pec Deck","Shoulders",0],["Cuban Press","Shoulders",0],
+  ["Y-Raise","Shoulders",0],["Landmine Press (Shoulders)","Shoulders",0],
+  ["Handstand Push-Up","Shoulders",1],["Pike Push-Up","Shoulders",1],["Behind-the-Neck Press","Shoulders",0],
+  // Arms
+  ["Concentration Curl","Arms",0],["Spider Curl","Arms",0],["Reverse Curl","Arms",0],
+  ["Zottman Curl","Arms",0],["Cable Hammer Curl","Arms",0],["EZ-Bar Curl","Arms",0],
+  ["Rope Pushdown","Arms",0],["Cable Overhead Tricep Extension","Arms",0],["Bench Dip","Arms",1],
+  ["Diamond Push-Up","Arms",1],["Wrist Curl","Arms",0],["Reverse Wrist Curl","Arms",0],
+  ["JM Press","Arms",0],
+  // Core
+  ["Plank","Core",1],["Side Plank","Core",1],["Bicycle Crunch","Core",1],["Mountain Climber","Core",1],
+  ["Dead Bug","Core",1],["Hollow Hold","Core",1],["Toes-to-Bar","Core",1],["Reverse Crunch","Core",1],
+  ["V-Up","Core",1],["Dragon Flag","Core",1],["Pallof Press","Core",0],["Cable Woodchopper","Core",0],
+  ["Suitcase Carry","Core",0],["Hanging Knee Raise","Core",1],["Sit-Up","Core",1]
+].map(m=>({name:m[0],group:m[1],bw:!!m[2]}));
+const LIBMAP = Object.fromEntries(LIB.map(m=>[m.name,m]));
+const GCOLOR = {Chest:"#3d8bff",Back:"#25d366",Legs:"#ff5a1f",Shoulders:"#c084fc",Arms:"#ffc53d",Core:"#22d3ee"};
+/* Muscle sub-groups a user can tag a custom movement with. */
+const MUSCLES = ["Upper Chest","Lower Chest","Lats","Traps","Rhomboids","Lower Back",
+  "Front Delts","Side Delts","Rear Delts","Biceps","Triceps","Forearms","Grip",
+  "Quads","Hamstrings","Glutes","Calves","Adductors","Abductors","Abs","Obliques"];
+/* LIB plus any movements the user built themselves. */
+function allMoves(){ return LIB.concat(S && S.customMoves ? S.customMoves : []); }
+
+/* ---------------- LEVEL ENGINE (canonical formulas) ---------------- */
+const Level = {
+  // Cardio: cumulative miles. L2@1, L3@3, L4@6, L5@10, L6@15, L7@24, L8@37, L9@54, L10@75, then +50/level.
+  runIncrement(lv){ if(lv<=5) return lv; if(lv<=9) return Math.min(50,(lv-6)*4+9); return 50; },
+  run(miles){
+    let lv=1, floor=0, guard=0;
+    while(guard++<5000){
+      const inc=this.runIncrement(lv);
+      if(miles>=floor+inc){ floor+=inc; lv++; } else break;
+    }
+    const inc=this.runIncrement(lv);
+    return {level:lv, floor, next:floor+inc, need:+(floor+inc-miles).toFixed(2),
+            pct: inc? Math.min(1,(miles-floor)/inc):0};
+  },
+  // Strength per movement: cumulative volume (weight x reps).
+  strIncrement(lv){ const s=[100,150,200,300,500,750,1000,1500]; return s[lv-1]!==undefined?s[lv-1]:2000; },
+  str(vol){
+    let lv=1, floor=0, guard=0;
+    while(guard++<5000){
+      const inc=this.strIncrement(lv);
+      if(vol>=floor+inc){ floor+=inc; lv++; } else break;
+    }
+    const inc=this.strIncrement(lv);
+    return {level:lv, floor, next:floor+inc, need:Math.round(floor+inc-vol),
+            pct: inc? Math.min(1,(vol-floor)/inc):0};
+  },
+  // Overall strength = average level across movements you have actually trained.
+  overallStrength(movements){
+    const ls=Object.keys(movements||{}).filter(k=>movements[k].volume>0).map(k=>this.str(movements[k].volume).level);
+    if(!ls.length) return 1;
+    return ls.reduce((a,b)=>a+b,0)/ls.length;
+  },
+  // Hybrid Index — rewards balance across both disciplines (max -25% for lopsided).
+  hybrid(runLv, strLv){
+    const base=(runLv+strLv)/2, gap=Math.abs(runLv-strLv), sum=runLv+strLv;
+    const balance = 1 - Math.min(.25, sum? (gap/sum)*.5 : 0);
+    return base*balance;
+  }
+};
+
+/* ---------------- FUEL ENGINE (canonical calorie + macro formulas) ----------------
+   Mirrors the Postgres/TypeScript engine in the backend repo. If you change a
+   constant here, change it there. Full write-up in docs/nutrition-model.md.
+   ------------------------------------------------------------------------------- */
+const Fuel = {
+  // Classic activity factors, for the "one number every day" model.
+  ACT:{sedentary:1.2, light:1.375, moderate:1.55, very:1.725, extra:1.9},
+  ACTNAME:{sedentary:"Barely active",light:"Lightly active",moderate:"Moderately active",
+           very:"Very active",extra:"Extremely active"},
+  ACTDESC:{sedentary:"Desk job, little or no training",
+           light:"Training 1–3 days a week",
+           moderate:"Training 3–5 days a week",
+           very:"Training 6–7 days a week",
+           extra:"Two-a-days, or training plus a physical job"},
+  // NEAT factors for the training-load model. These cover LIVING only —
+  // your logged runs and lifts get added on top, so nothing is double counted.
+  NEAT:{desk:1.2, on_feet:1.35, manual:1.5},
+  NEATNAME:{desk:"Desk job",on_feet:"On my feet all day",manual:"Physical job"},
+  NEATDESC:{desk:"Mostly seated outside training",on_feet:"7,500–12,000 steps before training",
+            manual:"12,000+ steps, manual work"},
+  FLOOR:{male:1500, female:1200},          // never serve a target below this
+  EAMIN:{male:25, female:30},              // kcal/kg lean mass — the RED-S line
+  FATFLOOR:{male:.8, female:1},            // g/kg bodyweight
+  KCAL_PER_KG:7700,                        // ~1 kg of body mass
+  RUN_KCAL:1.036,                          // kcal per kg per km, gross
+  LIFT_MET:5,                              // moderate resistance training
+  MIN_PER_SET:3,                           // when a lift has no recorded duration
+  BF_KCAL_PER_FEED:65,                     // gross energy to make milk for one nursing/pump session
+                                           // (~500 kcal/day across 8 feeds — the figure cited for exclusive breastfeeding)
+
+  kg(){ return (+S.profile.bodyweight||0)/2.20462262185; },
+  cm(){ return (+S.profile.heightIn||0)*2.54; },
+  // Age self-corrects: we store what they told us and the year they told us.
+  age(){ const p=S.profile; if(!p.age) return 0;
+    return p.age + Math.max(0, new Date().getFullYear()-(p.ageYear||new Date().getFullYear())); },
+  ready(){ const p=S.profile; return !!(p.sex && p.heightIn>0 && p.age>0 && p.bodyweight>0); },
+  lbm(){ const bf=+S.profile.bodyFat||0; return bf>0 ? this.kg()*(1-bf/100) : null; },
+
+  // Resting metabolism. Lean mass beats a population average, so body fat %
+  // switches us to Katch-McArdle — which needs no sex term at all, because
+  // lean mass already carries the difference.
+  bmr(){
+    const lb=this.lbm();
+    // A manually entered resting burn overrides the equation, but we still
+    // carry lean mass through (from body fat %) so protein and RED-S math hold.
+    if(S.profile.bmrManual && +S.profile.bmrCustom>0)
+      return {v:+S.profile.bmrCustom, f:"Your number", lbm:lb};
+    if(lb!=null) return {v:370+21.6*lb, f:"Katch-McArdle", lbm:lb};
+    const v=10*this.kg()+6.25*this.cm()-5*this.age()+(S.profile.sex==="female"?-161:5);
+    return {v, f:"Mifflin-St Jeor", lbm:null};
+  },
+
+  /* The equation's own resting number, ignoring any manual override — used to
+     pre-fill and label the "set your own" field in Settings. */
+  bmrAuto(){
+    const lb=this.lbm();
+    if(lb!=null) return Math.round(370+21.6*lb);
+    return Math.round(10*this.kg()+6.25*this.cm()-5*this.age()+(S.profile.sex==="female"?-161:5));
+  },
+
+  /* Calories burned making milk. Uses the count logged for a given day if there
+     is one, otherwise the average the mother gave at signup. Zero unless she is
+     flagged as a breastfeeding mother. */
+  breastfeedingBurn(feeds){
+    const p=S.profile;
+    if(p.sex!=="female" || p.breastfeeding!=="yes") return 0;
+    let n;
+    if(feeds!=null) n=feeds;
+    else{ const d=S.macros[todayKey()]; n=(d&&d.bf!=null)?d.bf:(+p.feedsPerDay||0); }
+    return Math.max(0, Math.round((+n||0)*this.BF_KCAL_PER_FEED));
+  },
+
+  // What today's logged training actually cost. This is the payoff of having
+  // runs and lifts in one app: no other calorie tracker has this number.
+  burn(bmrV, key){
+    const k=key||todayKey(), kg=this.kg();
+    let run=0, lift=0, runMin=0, liftMin=0;
+    S.runLog.forEach(r=>{
+      if(dkey(r.date)!==k) return;
+      const min=+r.min||Math.round(r.miles*9);
+      const gross=this.RUN_KCAL*kg*(r.miles*1.609344);
+      run+=Math.max(0,gross-(bmrV/1440)*min); runMin+=min;
+    });
+    S.liftLog.forEach(l=>{
+      if(dkey(l.date)!==k) return;
+      const min=+l.min || ((l.sets&&l.sets.length)||0)*this.MIN_PER_SET || 15;
+      const gross=this.LIFT_MET*3.5*kg/200*min;
+      lift+=Math.max(0,gross-(bmrV/1440)*min); liftMin+=min;
+    });
+    return {kcal:run+lift, run, lift, min:runMin+liftMin, runMin, liftMin};
+  },
+
+  compute(opts){
+    opts=opts||{};
+    const p=S.profile, kg=this.kg(), b=this.bmr();
+    const model=opts.model||p.calModel||"training_load";
+
+    let tdee, exercise, estimated, burn, source;
+    if(model==="multiplier"){
+      burn=this.burn(b.v); source="activity";
+      tdee=b.v*(this.ACT[p.activity]||this.ACT.moderate);
+      exercise=Math.max(0,tdee-b.v*1.2);   // everything above sedentary
+      estimated=true;
+    }else{
+      const basis=this.basis(b.v);
+      burn=basis.burn; source=basis.source; exercise=basis.kcal;
+      tdee=b.v*(this.NEAT[p.neat]||this.NEAT.desk)+exercise;
+      estimated = source!=="today";
+    }
+
+    // Breastfeeding adds real energy demand on top of living + training.
+    const bfBurn=this.breastfeedingBurn();
+    tdee+=bfBurn;
+
+    const goal=opts.goal||p.calGoal||"maintain";
+    const cap=goal==="lose"?1:.5;
+    const rate=goal==="maintain"?0:Math.min(Math.abs(+p.calRate||(goal==="lose"?.75:.25)),cap);
+    const daily=(rate/100)*kg*this.KCAL_PER_KG/7;
+    let target=tdee+(goal==="lose"?-daily:goal==="gain"?daily:0);
+
+    const flags=[];
+    const floor=this.FLOOR[p.sex]||1500;
+    if(target<floor){
+      flags.push({s:"warn",t:`Raised to the ${floor} kcal floor. Weight will come off slower than you asked for.`});
+      target=floor;
+    }
+    if(target<b.v) flags.push({s:"warn",t:"This is under your resting metabolism. Short blocks only."});
+
+    // Protein first, then a sex-specific fat floor, then carbs take the rest —
+    // carbs are the fuel that should flex with mileage.
+    const protein = b.lbm!=null ? b.lbm*(goal==="lose"?2.8:2.3) : kg*(goal==="lose"?2.2:1.8);
+    const fat = Math.max((this.FATFLOOR[p.sex]||.8)*kg, target*.25/9);
+    const carbs = Math.max(0,(target-protein*4-fat*9)/4);
+    if(carbs<=0) flags.push({s:"bad",t:"Protein and fat eat the whole budget. Nothing left to fuel running — ease the deficit."});
+
+    if(b.lbm!=null){
+      const ea=(target-exercise)/b.lbm, min=this.EAMIN[p.sex]||25;
+      if(ea<min) flags.push({s:estimated?"warn":"bad",
+        t:`Energy availability ${Math.round(ea)} kcal/kg lean mass, under the ${min} line linked to RED-S — hormones, bone density, stalled adaptation.`+
+          (estimated?" Estimated from your activity level, not logged sessions.":"")});
+      else if(ea<45) flags.push({s:"warn",t:`Energy availability ${Math.round(ea)}. Fine for a deliberate cut, not somewhere to live.`});
+    }
+
+    const weekKm=this.weekKm();
+    const carbNeed = weekKm>=80?9 : weekKm>=50?7 : weekKm>=20?5 : 3;
+    if(carbs>0 && weekKm>=20 && carbs/kg < carbNeed*.75)
+      flags.push({s:"warn",t:`${(carbs/kg).toFixed(1)} g/kg of carbs is light for ${Math.round(weekKm/1.609344)} mi a week. Expect heavy legs on long runs.`});
+
+    return {bmr:Math.round(b.v), formula:b.f, lbm:b.lbm, bfBurn:Math.round(bfBurn),
+            tdee:Math.round(tdee), target:Math.round(target), adj:Math.round(target-tdee),
+            exercise:Math.round(exercise), estimated, burn, source, model, goal, rate,
+            protein:Math.round(protein), fat:Math.round(fat), carbs:Math.round(carbs),
+            fiber:Math.round(target/1000*14), flags};
+  },
+
+  weekKm(){ return runsSince(weekAgo(6)).reduce((a,r)=>a+r.miles,0)*1.609344; },
+
+  /* Average daily training burn over the last 7 days. */
+  avgBurn(bmrV){
+    let sum=0;
+    for(let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()-i); sum+=this.burn(bmrV,dkey(d)).kcal; }
+    return sum/7;
+  },
+
+  /* Which training number the training-load model should use today.
+     Nothing logged yet at 8am shouldn't hand you a rest-day target, and a
+     brand new account has no history at all — so fall back in stages. */
+  basis(bmrV){
+    const today=this.burn(bmrV);
+    if(today.kcal>0) return {kcal:today.kcal, source:"today", burn:today};
+    const avg=this.avgBurn(bmrV);
+    if(avg>0) return {kcal:avg, source:"average", burn:today};
+    const planned=Math.max(0,bmrV*(this.ACT[S.profile.activity]||this.ACT.moderate)-bmrV*1.2);
+    return {kcal:planned, source:"planned", burn:today};
+  },
+
+  // Sex-specific micronutrients worth surfacing. Iron is the big one: it is the
+  // most common deficiency in female runners, and foot-strike haemolysis makes
+  // endurance athletes of either sex worse off than the general population.
+  micros(){
+    const p=S.profile, menstruating = p.sex==="female" && this.age()<51;
+    return {iron:Math.round((menstruating?18:8)*1.3), calcium:1000, vitD:1000,
+            note: menstruating
+              ? "Iron deficiency is the most common nutritional problem in female runners — worth a ferritin test rather than guessing."
+              : "Endurance training raises iron needs through sweat and foot-strike haemolysis."};
+  }
+};
+
+/* ---------------- STATE ---------------- */
+const KEY="hybrid_v2", OLDKEY="hybrid_v1";
+const DEFAULT_WIDGETS=["hybrid","levels","week","protein","activity"];
+const blank=()=>({
+  onboarded:false,
+  profile:{name:"",goal:"",experience:"",runDays:3,liftDays:3,split:"",proteinTarget:150,trackFC:false,bodyweight:175,premium:false,
+    // fuel engine inputs — see the Fuel object above
+    sex:"", heightIn:0, age:0, ageYear:0, bodyFat:0,
+    activity:"moderate", neat:"desk", calModel:"training_load",
+    calGoal:"maintain", calRate:.75, proteinManual:false,
+    bmrManual:false, bmrCustom:0,               // set-your-own resting calories
+    breastfeeding:"", feedsPerDay:0,            // nursing/pumping calorie burn
+    usdaKey:""},                                // USDA FoodData Central API key (recipe lookups)
+  totals:{miles:0,runs:0,lifts:0,minutes:0},
+  movements:{},           // name -> {volume, sets, best:{w,r}}
+  customMoves:[],         // user-built movements: {name,group,sub:[],bw}
+  recipes:[],             // saved meals: {id,name,servings,ingredients:[{raw,grams,name,kcal,p,f,c}]}
+  runLog:[], liftLog:[], macros:{}, routines:[], layout:DEFAULT_WIDGETS.slice(),
+  active:null             // in-progress routine session
+});
+const toastQ=[];
+let S = load();
+
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){ const d=JSON.parse(raw); return migrate(d); }
+    const old=localStorage.getItem(OLDKEY);
+    if(old){ const d=JSON.parse(old); toastQ.push(["Progress imported","Your v1 data carried over."]); return migrate(d); }
+  }catch(e){ console.warn("load failed",e); }
+  return blank();
+}
+function migrate(d){
+  const b=blank();
+  const out=Object.assign(b,d);
+  out.profile=Object.assign(b.profile,d.profile||{});
+  out.totals=Object.assign(b.totals,d.totals||{});
+  out.movements=d.movements||{};
+  // v1 short names -> v2 library names
+  const map={"Squat":"Back Squat","Bench Press":"Bench Press (Barbell)","Deadlift":"Deadlift (Barbell)",
+             "Overhead Press":"Overhead Press (Barbell)","Barbell Row":"Bent-Over Row (Barbell)","Pull-up":"Pull-Up"};
+  Object.keys(map).forEach(k=>{
+    if(out.movements[k]){
+      const t=map[k], src=out.movements[k];
+      out.movements[t]=out.movements[t]||{volume:0,sets:0};
+      out.movements[t].volume+=src.volume||0; out.movements[t].sets+=src.sets||0;
+      delete out.movements[k];
+    }
+  });
+  // Custom movements the user built: register them so grouping and colours work.
+  out.customMoves=Array.isArray(d.customMoves)?d.customMoves:[];
+  out.customMoves.forEach(m=>{ if(m&&m.name) LIBMAP[m.name]={name:m.name,group:m.group||"Other",bw:!!m.bw,sub:m.sub||[]}; });
+  Object.keys(out.movements).forEach(k=>{ if(!LIBMAP[k]) LIBMAP[k]={name:k,group:"Other",bw:false}; });
+  if(!Array.isArray(out.layout)||!out.layout.length) out.layout=DEFAULT_WIDGETS.slice();
+  if(!Array.isArray(out.routines)) out.routines=[];
+  if(!Array.isArray(out.recipes)) out.recipes=[];
+  // Anyone who onboarded before calories existed keeps a manual protein target
+  // until they fill in the new fields. Nobody's saved numbers change under them.
+  if(d.onboarded && !out.profile.sex) out.profile.proteinManual=true;
+  return out;
+}
+
+/* Calories for a logged day. Days logged before calorie tracking existed have
+   no stored total, so derive one from the macros rather than showing zero. */
+function dayFuel(k){
+  const m=S.macros[k||todayKey()]||{p:0,f:0,c:0,items:[]};
+  const kcal = m.kcal!=null ? m.kcal : (m.p||0)*4+(m.c||0)*4+(m.f||0)*9;
+  return {p:m.p||0, f:m.f||0, c:m.c||0, kcal, items:m.items||[]};
+}
+/* The targets in play right now: computed once the profile is filled in,
+   falling back to the hand-typed protein number for everyone else. */
+function fuelTargets(){ return Fuel.ready() ? Fuel.compute() : null; }
+function proteinGoal(t){
+  t = t===undefined ? fuelTargets() : t;
+  return (!t || S.profile.proteinManual) ? (+S.profile.proteinTarget||150) : t.protein;
+}
+const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} };
+
+/* ---------------- DERIVED ---------------- */
+function stats(){
+  const r=Level.run(S.totals.miles);
+  const sLv=Level.overallStrength(S.movements);
+  return {run:r, strLevel:sLv, hybrid:Level.hybrid(r.level,sLv),
+          trained:Object.keys(S.movements).filter(k=>S.movements[k].volume>0)};
+}
+// local calendar day, not UTC — so "today" rolls over at local midnight
+const dkey=d=>{ const x=new Date(d);
+  return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); };
+const todayKey=()=>dkey(new Date());
+function weekAgo(n){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-n); return d.getTime(); }
+function runsSince(ms){ return S.runLog.filter(r=>new Date(r.date).getTime()>=ms); }
+function liftsSince(ms){ return S.liftLog.filter(l=>new Date(l.date).getTime()>=ms); }
+const fmt=(n,d=1)=>Number(n).toFixed(d).replace(/\.0+$/,"");
+const pace=(mi,min)=> mi>0? (()=>{const p=min/mi;return Math.floor(p)+":"+String(Math.round((p%1)*60)).padStart(2,"0");})() : "—";
+
+/* ---------------- UI HELPERS ---------------- */
+const $=s=>document.querySelector(s);
+const vp=()=>$("#viewport");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function ring(pct,label,val,color,size=104,stroke=9){
+  const r=(size-stroke)/2, c=2*Math.PI*r, off=c*(1-Math.max(0,Math.min(1,pct)));
+  return `<div class="ring" style="width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#1e2734" stroke-width="${stroke}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+        stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"
+        style="transition:stroke-dashoffset .8s cubic-bezier(.22,.61,.36,1)"/>
+    </svg>
+    <div class="rin"><b>${val}</b><span>${label}</span></div></div>`;
+}
+function toast(title,sub){
+  const el=document.createElement("div");
+  el.className="tst"; el.innerHTML=`<b>${esc(title)}</b>${sub?`<div>${esc(sub)}</div>`:""}`;
+  $("#toast").appendChild(el);
+  setTimeout(()=>{ el.style.transition="opacity .3s,transform .3s"; el.style.opacity=0; el.style.transform="translateY(-12px)";
+    setTimeout(()=>el.remove(),320); }, 3200);
+}
+function flushToasts(){ while(toastQ.length){ const t=toastQ.shift(); toast(t[0],t[1]); } }
+
+/* ---------------- SHEETS ---------------- */
+let sheetOpen=false;
+function sheet(html,opts={}){
+  closeSheet(true);
+  sheetOpen=true;
+  const scrim=document.createElement("div"); scrim.className="scrim"; scrim.id="scrim";
+  const s=document.createElement("div"); s.className="sheet"; s.id="sheet";
+  s.innerHTML=`<div class="grab"></div>`+html;
+  scrim.onclick=()=>{ if(opts.persist!==true) closeSheet(); };
+  $("#layer").appendChild(scrim); $("#layer").appendChild(s);
+  if(opts.after) opts.after(s);
+  return s;
+}
+function closeSheet(instant){
+  const s=$("#sheet"), sc=$("#scrim");
+  if(!s&&!sc) return;
+  sheetOpen=false;
+  if(instant){ s&&s.remove(); sc&&sc.remove(); return; }
+  if(s){ s.style.transition="transform .22s ease-in"; s.style.transform="translateY(100%)"; }
+  if(sc){ sc.style.transition="opacity .22s"; sc.style.opacity=0; }
+  setTimeout(()=>{ s&&s.remove(); sc&&sc.remove(); },230);
+}
+</script>
+<script>
+/* ============================================================
+   ROUTER + PAGE TRANSITIONS
+   Every page/tab change fades the old view out and the new one in.
+   ============================================================ */
+const TABS=[["home","Home"],["train","Train"],["tree","Tree"],["fuel","Fuel"],["ranks","Ranks"]];
+const TABOF={home:"home",running:"home",strength:"home",movement:"home",settings:"home",
+             train:"train",routine:"train",workout:"train",tree:"tree",fuel:"fuel",ranks:"ranks",
+             recipes:"fuel",recipe:"fuel"};
+let route={page:"home",param:null}, animating=false, editing=false;
+
+function nav(page,param){
+  if(animating) return;
+  if(page===route.page && JSON.stringify(param)===JSON.stringify(route.param)) return;
+  if(editing) setEdit(false);
+  closeSheet();
+  animating=true;
+  const cur=vp().firstElementChild;
+  if(cur){ cur.classList.remove("fade-enter"); cur.classList.add("fade-exit"); }
+  setTimeout(()=>{
+    route={page,param};
+    paint();
+    window.scrollTo(0,0);
+    animating=false;
+  }, cur?165:0);
+}
+function repaint(){ // in-place refresh, no fade
+  const cur=vp().firstElementChild, y=window.scrollY;
+  paint(true); window.scrollTo(0,y);
+}
+function paint(noAnim){
+  const html=(PAGES[route.page]||PAGES.home)(route.param);
+  vp().innerHTML=`<div class="view ${noAnim?"":"fade-enter"}">${html}</div>`;
+  drawTabs();
+  const fn=AFTER[route.page]; if(fn) fn(route.param);
+}
+function drawTabs(){
+  const t=TABOF[route.page]||"home";
+  $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-tab="${k}" class="${k===t?"on":""}">${l}</button>`).join("");
+  const hide = route.page==="workout" || !S.onboarded;
+  $("#tabs").style.display=hide?"none":"flex";
+  $("#fab").style.display=hide?"none":"grid";
+}
+$("#tabs").addEventListener("click",e=>{ const b=e.target.closest("[data-tab]"); if(b) nav(b.dataset.tab,null); });
+$("#fab").addEventListener("click",()=>quickLog());
+
+/* header helper */
+function head(title,sub,back){
+  return `<div class="hd" style="padding-left:0;padding-right:0">
+    <div>${back?`<button class="backbtn" onclick="nav('${back}',null)">‹ Back</button>`:""}
+      <h1>${esc(title)}</h1>${sub?`<div class="sub">${esc(sub)}</div>`:""}</div>
+    ${route.page==="home"?`<button class="backbtn" onclick="nav('settings',null)" style="font-size:13px">Settings</button>`:""}
+  </div>`;
+}
+
+/* ============================================================
+   ONBOARDING
+   ============================================================ */
+const ONB=[
+  {k:"sex",q:"Biological sex?",note:"Drives the calorie equation, your fat floor and your iron target. Nothing else in the app changes.",
+    o:[["male","Male",""],["female","Female",""]]},
+  {k:"breastfeeding",q:"Are you a breastfeeding mother?",when:d=>d.sex==="female",
+    note:"Making milk burns real calories, so we'll add them to your daily target and let you track feeds on the Fuel tab.",
+    o:[["yes","Yes",""],["no","No",""]]},
+  {k:"feedsPerDay",q:"Feeds or pumps a day, on average?",when:d=>d.sex==="female"&&d.breastfeeding==="yes",
+    note:"A rough number is fine — you can log the exact count each day on the Fuel tab.",
+    o:[[6,"6 or fewer","Older baby, some solids"],[8,"7–8","Established routine"],
+       [10,"9–10","Frequent feeding"],[12,"11 or more","Newborn / cluster feeding"]]},
+  {k:"goal",q:"What's your main goal?",o:[["balanced","Balanced hybrid","Run far, lift heavy, stay even"],
+    ["endurance","Endurance first","Racing is the priority, lifting supports it"],
+    ["strength","Strength first","Lifting is the priority, running supports it"],
+    ["race","Race + PR","Chasing a race time and a lifting PR at once"]]},
+  {k:"experience",q:"Where are you at?",o:[["new","New to training","Under a year of consistent work"],
+    ["some","Some experience","1–3 years, know the basics"],["exp","Experienced","3+ years of structured training"]]},
+  {k:"runDays",q:"Run days per week?",o:[[1,"1–2 days","Light running base"],[3,"3–4 days","Standard hybrid volume"],
+    [5,"5–6 days","Serious mileage"],[7,"Every day","Run streak"]]},
+  {k:"liftDays",q:"Lift days per week?",o:[[2,"2 days","Full body, minimal"],[3,"3 days","Push / pull / legs"],
+    [4,"4 days","Upper / lower split"],[5,"5+ days","High frequency"]]},
+  {k:"split",q:"How do you structure it?",o:[["same","Same day","Lift and run on the same day"],
+    ["sep","Separate days","Never stack the two"],["flex","Flexible","Whatever the week allows"]]},
+  {k:"neat",q:"Outside of training, your day is…",note:"Training gets counted separately from your logged runs and lifts — this is just the rest of your life.",
+    o:[["desk","Desk job","Mostly seated, under ~5,000 steps"],
+       ["on_feet","On my feet","7,500–12,000 steps before any training"],
+       ["manual","Physical job","12,000+ steps, manual work"]]}
+];
+/* Suggest an activity level from the training volume they already told us.
+   They can still override it in Settings — this just avoids asking twice. */
+function suggestActivity(d){
+  const days=(+d.runDays||0)+(+d.liftDays||0);
+  return days>=10?"extra" : days>=7?"very" : days>=4?"moderate" : days>=2?"light" : "sedentary";
+}
+let onbStep=0, onbData={trackFC:true};
+/* Only the questions that apply to the answers given so far (e.g. breastfeeding
+   is asked only after "Female"). Everything downstream indexes into this. */
+function activeOnb(){ return ONB.filter(q=>!q.when||q.when(onbData)); }
+const ONB_TOTAL=()=>activeOnb().length+3;
+function onbShell(inner){
+  const t=ONB_TOTAL();
+  return `<div style="padding-top:calc(env(safe-area-inset-top) + 42px)">
+    <div class="bar" style="margin-bottom:26px"><i style="width:${(onbStep/t)*100}%;background:var(--run)"></i></div>
+    <div class="tiny" style="margin-bottom:6px">STEP ${Math.min(onbStep+1,t)} OF ${t}</div>${inner}</div>`;
+}
+function renderOnboarding(){
+  const QS=activeOnb();
+  if(onbStep<QS.length){
+    const s=QS[onbStep];
+    return onbShell(`<h1 style="margin:0 0 ${s.note?"10":"20"}px;font-size:27px;letter-spacing:-.7px">${s.q}</h1>
+      ${s.note?`<p class="muted" style="margin:0 0 18px;line-height:1.5">${s.note}</p>`:""}
+      ${s.o.map(o=>`<button class="opt ${onbData[s.k]===o[0]?"sel":""}" onclick="onbPick('${s.k}',${typeof o[0]==="number"?o[0]:`'${o[0]}'`})">
+        <b>${o[1]}</b>${o[2]?`<span>${o[2]}</span>`:""}</button>`).join("")}`);
+  }
+
+  /* ---- body measurements: the four inputs the calorie math needs ---- */
+  if(onbStep===QS.length){
+    const p=S.profile, ft=Math.floor((p.heightIn||0)/12), inch=(p.heightIn||0)%12;
+    return onbShell(`<h1 style="margin:0 0 8px;font-size:27px;letter-spacing:-.7px">Your measurements</h1>
+      <p class="muted" style="margin:0 0 20px;line-height:1.5">Height, weight and age go into the same equation clinics use. Nothing here leaves your phone.</p>
+      <label class="lb">Height</label>
+      <div class="hstack" style="margin-bottom:14px">
+        <div><input class="fld" id="oft" type="number" inputmode="numeric" placeholder="5" value="${ft||""}"></div>
+        <div><input class="fld" id="oin" type="number" inputmode="decimal" placeholder="11" value="${p.heightIn?inch:""}"></div>
+      </div>
+      <div class="tiny" style="margin:-8px 0 14px 2px">Feet and inches</div>
+      <div class="hstack" style="margin-bottom:14px">
+        <div><label class="lb">Bodyweight (lb)</label>
+          <input class="fld" id="obw" type="number" inputmode="decimal" value="${p.bodyweight||175}"></div>
+        <div><label class="lb">Age</label>
+          <input class="fld" id="oage" type="number" inputmode="numeric" placeholder="32" value="${p.age||""}"></div>
+      </div>
+      <label class="lb">Body fat % — optional, but it upgrades everything</label>
+      <input class="fld" id="obf" type="number" inputmode="decimal" placeholder="Skip if you don't know" value="${p.bodyFat||""}" style="margin-bottom:8px">
+      <div class="tiny" style="margin:0 0 18px 2px;line-height:1.5">With body fat we switch to a lean-mass equation, which is more accurate for trained people and needs no sex adjustment at all.</div>
+      <button class="btn p" onclick="grabBody()">Continue</button>`);
+  }
+
+  /* ---- computed targets, with the goal dial ---- */
+  if(onbStep===QS.length+1){
+    // Preview with the activity multiplier, not the training-load model: they
+    // have not logged a session yet, so a training-load number here would be a
+    // rest-day number and would read as absurdly low on day one.
+    const t=Fuel.ready()?Fuel.compute({model:"multiplier"}):null;
+    if(!t) return onbShell(`<h1 style="margin:0 0 8px;font-size:27px">Something's missing</h1>
+      <p class="muted" style="margin:0 0 20px">Go back and check your height, weight and age.</p>
+      <button class="btn g" onclick="onbStep--;paintOnb()">Back</button>`);
+    const goals=[["lose","Lose fat","Slow enough to keep your lifts"],
+                 ["maintain","Maintain","Fuel the training you're already doing"],
+                 ["gain","Build","A controlled surplus for strength work"]];
+    return onbShell(`<h1 style="margin:0 0 8px;font-size:27px;letter-spacing:-.7px">Here's your number</h1>
+      <p class="muted" style="margin:0 0 18px;line-height:1.5">Resting burn ${t.bmr.toLocaleString()} kcal by ${t.formula}, plus the way you live and train.</p>
+      <div class="card" style="text-align:center;padding:20px 16px">
+        <div class="big" style="color:var(--run)">${t.target.toLocaleString()}</div>
+        <div class="muted" style="margin-top:6px">calories a day</div>
+        <div class="grid2" style="gap:10px;margin-top:16px">
+          <div class="stat" style="background:#101722"><b style="color:var(--hyb)">${t.protein}g</b><span>Protein</span></div>
+          <div class="stat" style="background:#101722"><b>${t.carbs}g</b><span>Carbs</span></div>
+        </div>
+        <div class="tiny" style="margin-top:10px">Fat ${t.fat}g · Fibre ${t.fiber}g</div>
+      </div>
+      ${goals.map(g=>`<button class="opt ${S.profile.calGoal===g[0]?"sel":""}" onclick="onbGoal('${g[0]}')">
+        <b>${g[1]}</b><span>${g[2]}</span></button>`).join("")}
+      <button class="opt ${onbData.trackFC?"sel":""}" style="margin-top:6px" onclick="onbData.trackFC=!onbData.trackFC;paintOnb()">
+        <b>${onbData.trackFC?"✓ ":""}Show carbs &amp; fat on the Fuel tab</b><span>Calories and protein show either way</span></button>
+      <button class="btn p" style="margin-top:14px" onclick="onbStep++;paintOnb()">Looks right</button>
+      <div class="tiny" style="margin-top:14px;line-height:1.55;text-align:center">
+        That's a typical ${Fuel.ACTNAME[S.profile.activity].toLowerCase()} day. Once you start logging, your daily
+        target rises and falls with the training you actually did.<br><br>
+        Every number here is an estimate to start from — two weeks of weight trend beats any equation. All of it is editable in Settings.</div>`);
+  }
+
+  return onbShell(`<h1 style="margin:0 0 8px;font-size:27px;letter-spacing:-.7px">What should we call you?</h1>
+    <p class="muted" style="margin:0 0 20px">This is the name on the leaderboard.</p>
+    <input class="fld" id="oname" placeholder="Display name" maxlength="22" style="margin-bottom:16px">
+    <button class="btn p" onclick="finishOnb()">Start at Level 1</button>`);
+}
+/* Answers land on the live profile as they are given, so the preview on the
+   targets step is computed by the same engine the app runs on. */
+function onbPick(k,v){ onbData[k]=v; S.profile[k]=v; onbStep++; paintOnb(); }
+function onbGoal(g){
+  S.profile.calGoal=g; onbData.calGoal=g;
+  S.profile.calRate = g==="lose"?.75 : g==="gain"?.25 : 0;
+  onbData.calRate=S.profile.calRate;
+  paintOnb();
+}
+function grabBody(){
+  const v=id=>{ const e=document.getElementById(id); return e? +e.value||0 : 0; };
+  const ft=v("oft"), inch=v("oin"), bw=v("obw"), age=v("oage"), bf=v("obf");
+  const heightIn=ft*12+inch;
+  if(heightIn<48||heightIn>90){ toast("Check your height","Somewhere between 4'0\" and 7'6\"."); return; }
+  if(bw<70||bw>600){ toast("Check your bodyweight","Enter it in pounds."); return; }
+  if(age<13||age>100){ toast("Check your age","Enter your age in years."); return; }
+  if(bf&&(bf<3||bf>70)){ toast("Check your body fat %","Leave it blank if you're not sure."); return; }
+  Object.assign(onbData,{heightIn,bodyweight:bw,age,ageYear:new Date().getFullYear(),bodyFat:bf,
+    activity:suggestActivity(onbData)});
+  Object.assign(S.profile,onbData);
+  onbStep++; paintOnb();
+}
+function paintOnb(){
+  vp().innerHTML=`<div class="view fade-enter">${renderOnboarding()}</div>`;
+  $("#tabs").style.display="none"; $("#fab").style.display="none";
+}
+function finishOnb(){
+  const n=document.getElementById("oname").value.trim();
+  if(!n){ toast("Name required","Enter a display name to continue."); return; }
+  S.profile=Object.assign(S.profile,onbData,{name:n,proteinManual:false});
+  const t=fuelTargets();
+  if(t) S.profile.proteinTarget=t.protein;   // a sane starting point if they ever go manual
+  S.onboarded=true; save();
+  route={page:"home",param:null}; paint();
+  toast("Welcome, "+n,t?`${t.target.toLocaleString()} kcal · ${t.protein}g protein to start.`:"You're Level 1 across the board. Go earn it.");
+}
+
+/* ============================================================
+   HOME — customizable widget board
+   ============================================================ */
+const WIDGETS={
+  hybrid:{name:"Hybrid Index",desc:"Your headline all-around score",render(){
+    const st=stats();
+    return card(`<div class="ctitle">Hybrid Index</div>
+      <div class="row"><div>
+        <div class="big" style="color:var(--hyb)">${st.hybrid.toFixed(2)}</div>
+        <div class="muted" style="margin-top:7px">Run L${st.run.level} · Strength L${fmt(st.strLevel,1)}</div>
+        <div class="tiny" style="margin-top:5px">${balanceNote(st)}</div>
+      </div>${ring(Math.min(1,st.hybrid/20),"index",st.hybrid.toFixed(1),"var(--hyb)",96,9)}</div>`,"tree")}},
+
+  levels:{name:"Level Rings",desc:"Running + strength — tap to open full stats",render(){
+    const st=stats();
+    const sInfo=strengthProgress(st);
+    return `<div class="grid2" style="margin-bottom:12px">
+      <div class="card tap" style="margin:0;text-align:center" data-go="running">
+        ${ring(st.run.pct,"Running","L"+st.run.level,"var(--run)",108,10)}
+        <div class="muted" style="margin-top:11px;font-size:12.5px">${fmt(st.run.need,1)} mi to L${st.run.level+1}</div></div>
+      <div class="card tap" style="margin:0;text-align:center" data-go="strength">
+        ${ring(sInfo.pct,"Strength","L"+fmt(st.strLevel,1),"var(--str)",108,10)}
+        <div class="muted" style="margin-top:11px;font-size:12.5px">${st.trained.length} movement${st.trained.length===1?"":"s"} trained</div></div></div>`}},
+
+  week:{name:"This Week",desc:"Runs, lifts and volume over 7 days",render(){
+    const rs=runsSince(weekAgo(6)), ls=liftsSince(weekAgo(6));
+    const mi=rs.reduce((a,r)=>a+r.miles,0), vol=ls.reduce((a,l)=>a+l.vol,0);
+    return card(`<div class="ctitle">This Week <span style="color:var(--dim2)">${S.profile.runDays}× run · ${S.profile.liftDays}× lift plan</span></div>
+      <div class="grid2" style="gap:10px">
+        <div class="stat" style="background:#101722"><b style="color:var(--run)">${fmt(mi,1)}</b><span>Miles</span></div>
+        <div class="stat" style="background:#101722"><b style="color:var(--str)">${(vol/1000).toFixed(1)}k</b><span>Volume lb</span></div>
+        <div class="stat" style="background:#101722"><b>${rs.length}</b><span>Runs</span></div>
+        <div class="stat" style="background:#101722"><b>${ls.length}</b><span>Lifts</span></div></div>`)}},
+
+  protein:{name:"Fuel Today",desc:"Calories and protein against today's targets",render(){
+    const m=dayFuel(), t=fuelTargets(), pGoal=proteinGoal(t);
+    const pPct=Math.min(1,m.p/(pGoal||1));
+    if(!t) return card(`<div class="ctitle">Fuel Today</div>
+      <div style="font-size:27px;font-weight:800;letter-spacing:-1px">${Math.round(m.p)}<span style="font-size:15px;color:var(--dim)"> / ${pGoal}g protein</span></div>
+      <div class="bar" style="margin-top:11px"><i style="width:${pPct*100}%;background:var(--hyb)"></i></div>
+      <div class="tiny" style="margin-top:9px">Add your height and age in Settings to track calories too.</div>`,"fuel");
+    const cPct=Math.min(1,m.kcal/(t.target||1));
+    return card(`<div class="ctitle">Fuel Today
+        <span style="color:var(--dim2)">${t.model==="training_load"&&t.burn.kcal>0?`+${Math.round(t.burn.kcal)} earned training`:""}</span></div>
+      <div class="row" style="margin-bottom:4px">
+        <span style="font-size:25px;font-weight:800;letter-spacing:-1px">${Math.round(m.kcal).toLocaleString()}<span style="font-size:14px;color:var(--dim)"> / ${t.target.toLocaleString()}</span></span>
+        <span class="tiny">${Math.max(0,Math.round(t.target-m.kcal)).toLocaleString()} left</span></div>
+      <div class="bar" style="margin-bottom:14px"><i style="width:${cPct*100}%;background:var(--run)"></i></div>
+      <div class="row" style="margin-bottom:4px">
+        <span style="font-size:19px;font-weight:750;letter-spacing:-.5px">${Math.round(m.p)}<span style="font-size:13px;color:var(--dim)"> / ${pGoal}g protein</span></span>
+        <span class="tiny">${Math.max(0,Math.round(pGoal-m.p))}g left</span></div>
+      <div class="bar"><i style="width:${pPct*100}%;background:var(--hyb)"></i></div>
+      ${S.profile.trackFC?`<div class="muted" style="margin-top:10px;font-size:12px">Carbs ${Math.round(m.c)} / ${t.carbs}g · Fat ${Math.round(m.f)} / ${t.fat}g</div>`:""}`,"fuel")}},
+
+  activity:{name:"Recent Activity",desc:"Your latest runs and lifts",render(){
+    const items=recentActivity(4);
+    return card(`<div class="ctitle">Recent Activity</div>
+      ${items.length?items.map(a=>`<div class="lrow">
+        <span class="dot" style="background:${a.t==="run"?"var(--run)":"var(--str)"}"></span>
+        <div class="nm"><b>${esc(a.title)}</b><div class="tiny">${a.sub}</div></div>
+        <div class="tiny">${a.when}</div></div>`).join(""):`<div class="empty">Nothing logged yet.<br>Hit ＋ to log your first session.</div>`}`)}},
+
+  routines:{name:"Quick Start",desc:"Launch a saved routine in one tap",render(){
+    return card(`<div class="ctitle">Quick Start</div>
+      ${S.routines.length?S.routines.slice(0,3).map((r,i)=>`<div class="lrow">
+        <div class="nm"><b>${esc(r.name)}</b><div class="tiny">${routineSub(r)}</div></div>
+        <button class="lvpill s" data-start="${i}" style="padding:7px 13px">Start</button></div>`).join("")
+        :`<div class="empty">No routines yet.<br>Build one in the Train tab.</div>`}`,"train")}},
+
+  streak:{name:"Training Streak",desc:"Consecutive days with a session logged",render(){
+    const s=streak();
+    return card(`<div class="ctitle">Streak</div>
+      <div class="row"><div><div class="big" style="color:var(--warn)">${s.cur}</div>
+      <div class="muted" style="margin-top:6px">day streak · best ${s.best}</div></div>
+      <div style="text-align:right"><div class="tiny">LAST 14 DAYS</div>
+      <div style="display:flex;gap:3px;margin-top:8px">${s.grid.map(d=>`<span style="width:9px;height:22px;border-radius:3px;background:${d?"var(--warn)":"#1e2734"}"></span>`).join("")}</div></div></div>`)}},
+
+  nextlvl:{name:"Closest Level Up",desc:"What you're nearest to unlocking",render(){
+    const st=stats(), n=closestLevelUps(st).slice(0,3);
+    return card(`<div class="ctitle">Closest Level Ups</div>
+      ${n.map(x=>`<div style="margin-bottom:12px"><div class="row" style="margin-bottom:6px">
+        <b style="font-size:13.5px">${esc(x.label)}</b><span class="tiny">${x.left}</span></div>
+        <div class="bar"><i style="width:${x.pct*100}%;background:${x.color}"></i></div></div>`).join("")}`)}},
+
+  rank:{name:"Your Rank",desc:"Where you sit on the leaderboard",render(){
+    const b=board(); const me=b.findIndex(x=>x.me)+1;
+    return card(`<div class="ctitle">Leaderboard</div>
+      <div class="row"><div><div class="big">#${me}</div><div class="muted" style="margin-top:6px">of ${b.length} hybrid athletes</div></div>
+      <div style="text-align:right"><div class="tiny">TOP</div><div style="font-weight:700;margin-top:5px">${esc(b[0].name)}</div>
+      <div class="tiny">${b[0].hy.toFixed(2)} index</div></div></div>`,"ranks")}},
+
+  prs:{name:"Recent PRs",desc:"Heaviest set logged per movement",render(){
+    const p=prList().slice(0,4);
+    return card(`<div class="ctitle">Personal Bests</div>
+      ${p.length?p.map(x=>`<div class="lrow"><div class="nm"><b>${esc(x.name)}</b><div class="tiny">${x.group}</div></div>
+        <span class="lvpill s">${x.w} lb × ${x.r}</span></div>`).join(""):`<div class="empty">Log a lift to set your first PR.</div>`}`)}},
+
+  mileage:{name:"Weekly Mileage",desc:"7-day running bar chart",render(){
+    const d=last7Miles(), mx=Math.max(1,...d.map(x=>x.mi));
+    return card(`<div class="ctitle">Last 7 Days <span style="color:var(--run)">${fmt(d.reduce((a,x)=>a+x.mi,0),1)} mi</span></div>
+      <div class="spark">${d.map(x=>`<div style="height:${Math.max(4,(x.mi/mx)*100)}%;background:${x.mi?"var(--run)":"#233043"}"></div>`).join("")}</div>
+      <div style="display:flex;gap:5px">${d.map(x=>`<div class="tiny" style="flex:1;text-align:center">${x.d}</div>`).join("")}</div>`,"running")}}
+};
+function card(inner,go){ return `<div class="card${go?" tap":""}" ${go?`data-go="${go}"`:""}>${inner}${go?`<div style="position:absolute"></div>`:""}</div>`; }
+
+function balanceNote(st){
+  const gap=Math.abs(st.run.level-st.strLevel);
+  if(gap<1) return "Perfectly balanced — full index value.";
+  const pen=Math.min(.25,(gap/(st.run.level+st.strLevel))*.5);
+  const side=st.run.level>st.strLevel?"lifting":"running";
+  return `−${Math.round(pen*100)}% balance penalty · more ${side} closes the gap.`;
+}
+function strengthProgress(st){
+  // progress of the "average" movement toward its next level
+  const t=st.trained;
+  if(!t.length) return {pct:0};
+  const p=t.map(k=>Level.str(S.movements[k].volume).pct);
+  return {pct:p.reduce((a,b)=>a+b,0)/p.length};
+}
+function recentActivity(n){
+  const a=[...S.runLog.map(r=>({t:"run",date:r.date,title:`${fmt(r.miles,2)} mi run`,sub:`${r.min} min · ${pace(r.miles,r.min)}/mi`})),
+           ...S.liftLog.map(l=>({t:"lift",date:l.date,title:l.move,sub:`${l.sets.length} sets · ${Math.round(l.vol).toLocaleString()} lb volume`}))];
+  a.sort((x,y)=>new Date(y.date)-new Date(x.date));
+  return a.slice(0,n).map(x=>Object.assign(x,{when:ago(x.date)}));
+}
+function ago(d){
+  const ms=Date.now()-new Date(d).getTime(), h=ms/36e5;
+  if(h<1) return Math.max(1,Math.round(ms/6e4))+"m";
+  if(h<24) return Math.round(h)+"h";
+  return Math.round(h/24)+"d";
+}
+function streak(){
+  const days=new Set([...S.runLog.map(r=>dkey(r.date)),...S.liftLog.map(l=>dkey(l.date))]);
+  let cur=0; const d=new Date(); d.setHours(0,0,0,0);
+  if(!days.has(dkey(d))) d.setDate(d.getDate()-1);
+  while(days.has(dkey(d))){ cur++; d.setDate(d.getDate()-1); }
+  let best=cur; const all=[...days].sort(); let run=0, prev=null;
+  all.forEach(k=>{ const t=new Date(k).getTime();
+    run = (prev && t-prev===864e5)? run+1 : 1; prev=t; best=Math.max(best,run); });
+  const grid=[]; for(let i=13;i>=0;i--){ const x=new Date(); x.setHours(0,0,0,0); x.setDate(x.getDate()-i); grid.push(days.has(dkey(x))); }
+  return {cur,best,grid};
+}
+function closestLevelUps(st){
+  const out=[{label:"Running",left:fmt(st.run.need,1)+" mi to L"+(st.run.level+1),pct:st.run.pct,color:"var(--run)"}];
+  st.trained.forEach(k=>{ const p=Level.str(S.movements[k].volume);
+    out.push({label:k,left:p.need.toLocaleString()+" lb to L"+(p.level+1),pct:p.pct,color:"var(--str)"}); });
+  return out.sort((a,b)=>b.pct-a.pct);
+}
+function prList(){
+  return Object.keys(S.movements).filter(k=>S.movements[k].best)
+    .map(k=>({name:k,group:(LIBMAP[k]||{}).group||"Other",w:S.movements[k].best.w,r:S.movements[k].best.r}))
+    .sort((a,b)=>b.w-a.w);
+}
+function last7Miles(){
+  const L=["S","M","T","W","T","F","S"], out=[];
+  for(let i=6;i>=0;i--){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    const k=dkey(d), mi=S.runLog.filter(r=>dkey(r.date)===k).reduce((a,r)=>a+r.miles,0);
+    out.push({d:L[d.getDay()],mi}); }
+  return out;
+}
+function routineSub(r){
+  const parts=[];
+  if(r.exercises.length) parts.push(r.exercises.length+" exercise"+(r.exercises.length===1?"":"s"));
+  if(r.run&&r.run.miles) parts.push(r.run.miles+" mi "+(r.run.when==="before"?"before":"after"));
+  return parts.join(" · ")||"Empty routine";
+}
+
+</script>
+<script>
+/* ============================================================
+   PAGES
+   ============================================================ */
+const PAGES={}, AFTER={};
+
+/* ---------------- HOME (customizable board) ---------------- */
+PAGES.home=function(){
+  const h=new Date().getHours();
+  const greet=h<12?"Good morning":h<18?"Good afternoon":"Good evening";
+  const board=S.layout.map(k=>WIDGETS[k]?`<div class="wgt" data-w="${k}"><button class="rm" data-rm="${k}">×</button>${WIDGETS[k].render()}</div>`:"").join("");
+  return head(editing?"Edit Home":greet, editing?"Drag to reorder · × to remove":esc(S.profile.name))
+    + (editing?`<div class="editbar">
+         <button class="btn g sm" onclick="openGallery()">+ Add Widget</button>
+         <button class="btn p sm" onclick="setEdit(false)">Done</button></div>`:"")
+    + `<div id="wlist">${board}</div>`
+    + (editing?`<button class="btn ghost sm" onclick="resetLayout()" style="margin-bottom:20px">Reset to default layout</button>`
+              :`<button class="btn ghost sm" onclick="setEdit(true)" style="margin-bottom:20px">Edit home screen</button>`);
+};
+AFTER.home=function(){
+  const list=document.getElementById("wlist");
+  if(!list) return;
+  list.addEventListener("click",e=>{
+    const rm=e.target.closest("[data-rm]");
+    if(rm){ S.layout=S.layout.filter(x=>x!==rm.dataset.rm); save(); repaint(); return; }
+    if(editing) return;
+    const st=e.target.closest("[data-start]");
+    if(st){ startRoutine(+st.dataset.start); return; }
+    const go=e.target.closest("[data-go]");
+    if(go) nav(go.dataset.go,null);
+  });
+  wireDrag(list);
+};
+function setEdit(on){
+  editing=on;
+  document.body.classList.toggle("editing",on);
+  repaint();
+}
+function resetLayout(){ S.layout=DEFAULT_WIDGETS.slice(); save(); repaint(); toast("Layout reset"); }
+function openGallery(){
+  const avail=Object.keys(WIDGETS).filter(k=>!S.layout.includes(k));
+  sheet(`<h3>Add a widget</h3>${
+    avail.length?avail.map(k=>`<button class="gal" onclick="addWidget('${k}')">
+      <div style="flex:1"><b>${WIDGETS[k].name}</b><span>${WIDGETS[k].desc}</span></div><span class="add">+</span></button>`).join("")
+    :`<div class="empty">Every widget is already on your home screen.</div>`}
+    <button class="btn g sm" style="margin-top:8px" onclick="closeSheet()">Close</button>`);
+}
+function addWidget(k){ if(!S.layout.includes(k)) S.layout.push(k); save(); closeSheet(); repaint(); }
+
+/* -------- long-press + drag-to-reorder (pointer based: mouse & touch) -------- */
+function wireDrag(list){
+  list.addEventListener("pointerdown",e=>{
+    const w=e.target.closest(".wgt"); if(!w) return;
+    if(e.target.closest("[data-rm]")) return;
+    const y0=e.clientY, hold=editing?150:520;
+    let timer=setTimeout(()=>{
+      timer=null; cleanup();
+      if(navigator.vibrate) navigator.vibrate(editing?8:14);
+      if(editing) startDrag(e,w); else setEdit(true);
+    },hold);
+    const mv=ev=>{ if(Math.abs(ev.clientY-y0)>9){ clearTimeout(timer); timer=null; cleanup(); } };
+    const up=()=>{ clearTimeout(timer); timer=null; cleanup(); };
+    function cleanup(){ list.removeEventListener("pointermove",mv);
+      list.removeEventListener("pointerup",up); list.removeEventListener("pointercancel",up); }
+    list.addEventListener("pointermove",mv);
+    list.addEventListener("pointerup",up);
+    list.addEventListener("pointercancel",up);
+  });
+  function startDrag(e,el){
+    const dg={el,startY:e.clientY};
+    el.classList.add("drag");
+    el.style.touchAction="none";
+    try{ el.setPointerCapture(e.pointerId); }catch(_){}
+    const move=ev=>{
+      ev.preventDefault();
+      const dy=ev.clientY-dg.startY;
+      el.style.transform=`translateY(${dy}px) scale(1.035)`;
+      const box=el.getBoundingClientRect(), cy=box.top+box.height/2;
+      for(const s of [...list.children]){
+        if(s===el) continue;
+        const r=s.getBoundingClientRect();
+        if(cy>r.top && cy<r.bottom){
+          const before=cy<r.top+r.height/2;
+          const oldTop=box.top-dy;
+          const sTop=r.top;
+          if(before) list.insertBefore(el,s); else list.insertBefore(el,s.nextSibling);
+          // FLIP the displaced sibling so it glides
+          const nr=s.getBoundingClientRect();
+          s.style.transition="none"; s.style.transform=`translateY(${sTop-nr.top}px)`;
+          requestAnimationFrame(()=>{ s.style.transition="transform .2s cubic-bezier(.22,.61,.36,1)"; s.style.transform=""; });
+          // keep the dragged card visually still
+          el.style.transform="";
+          const nb=el.getBoundingClientRect();
+          dg.startY += nb.top-oldTop;
+          el.style.transform=`translateY(${ev.clientY-dg.startY}px) scale(1.035)`;
+          break;
+        }
+      }
+    };
+    const up=()=>{
+      el.removeEventListener("pointermove",move);
+      el.removeEventListener("pointerup",up);
+      el.removeEventListener("pointercancel",up);
+      el.style.transition="transform .18s ease";
+      el.style.transform="";
+      el.style.touchAction="";
+      setTimeout(()=>{ el.style.transition=""; el.classList.remove("drag"); },190);
+      S.layout=[...list.children].map(c=>c.dataset.w).filter(Boolean);
+      save();
+    };
+    el.addEventListener("pointermove",move);
+    el.addEventListener("pointerup",up);
+    el.addEventListener("pointercancel",up);
+  }
+}
+
+/* ---------------- RUNNING STATS PAGE ---------------- */
+PAGES.running=function(){
+  const st=stats(), r=st.run;
+  const w4=[0,1,2,3].map(i=>{
+    const end=weekAgo(i*7), start=weekAgo(i*7+6);
+    const rs=S.runLog.filter(x=>{const t=new Date(x.date).getTime(); return t>=start && t<end+864e5;});
+    return {mi:rs.reduce((a,x)=>a+x.miles,0),n:rs.length};
+  });
+  const avg=w4.reduce((a,x)=>a+x.mi,0)/4;
+  const d7=last7Miles(), mx=Math.max(1,...d7.map(x=>x.mi));
+  const totMin=S.runLog.reduce((a,x)=>a+x.min,0);
+  const longest=S.runLog.reduce((a,x)=>Math.max(a,x.miles),0);
+  return head("Running","Level "+r.level,"home")
+  + `<div class="card" style="text-align:center;padding-top:22px">
+      ${ring(r.pct,"Level "+r.level,fmt(r.pct*100,0)+"%","var(--run)",148,12)}
+      <div style="margin-top:16px;font-size:19px;font-weight:750">${fmt(r.need,2)} mi to Level ${r.level+1}</div>
+      <div class="muted" style="margin-top:5px">${fmt(S.totals.miles,1)} of ${fmt(r.next,0)} cumulative miles</div>
+      <div class="bar" style="margin-top:14px"><i style="width:${r.pct*100}%;background:var(--run)"></i></div>
+      <div class="row" style="margin-top:8px"><span class="tiny">L${r.level} · ${fmt(r.floor,0)} mi</span><span class="tiny">L${r.level+1} · ${fmt(r.next,0)} mi</span></div>
+    </div>
+    <div class="grid2">
+      <div class="stat"><b style="color:var(--run)">${fmt(avg,1)}</b><span>Weekly avg (4wk)</span></div>
+      <div class="stat"><b>${fmt(S.totals.miles,1)}</b><span>Total miles</span></div>
+      <div class="stat"><b>${S.totals.runs}</b><span>Runs logged</span></div>
+      <div class="stat"><b>${fmt(longest,1)}</b><span>Longest run</span></div>
+      <div class="stat"><b>${pace(S.totals.miles,totMin)}</b><span>Avg pace /mi</span></div>
+      <div class="stat"><b>${Math.round(totMin)}</b><span>Total minutes</span></div>
+    </div>
+    <div class="card"><div class="ctitle">Last 7 Days</div>
+      <div class="spark">${d7.map(x=>`<div style="height:${Math.max(4,(x.mi/mx)*100)}%;background:${x.mi?"var(--run)":"#233043"}"></div>`).join("")}</div>
+      <div style="display:flex;gap:5px">${d7.map(x=>`<div class="tiny" style="flex:1;text-align:center">${x.d}</div>`).join("")}</div>
+    </div>
+    <div class="card"><div class="ctitle">4-Week Trend</div>
+      ${w4.map((w,i)=>`<div class="row" style="margin-bottom:11px">
+        <span class="muted" style="width:74px;font-size:12.5px">${i===0?"This week":i+" wk ago"}</span>
+        <div class="bar" style="flex:1"><i style="width:${Math.min(100,(w.mi/Math.max(1,...w4.map(x=>x.mi)))*100)}%;background:var(--run)"></i></div>
+        <span style="width:60px;text-align:right;font-size:12.5px;font-weight:700">${fmt(w.mi,1)} mi</span></div>`).join("")}
+    </div>
+    <div class="card"><div class="ctitle">Level Ladder</div>
+      ${ladderRun(r.level)}
+    </div>
+    <div class="card"><div class="ctitle">Run History</div>
+      ${S.runLog.length?[...S.runLog].reverse().slice(0,25).map(x=>`<div class="lrow">
+        <div class="nm"><b>${fmt(x.miles,2)} mi</b><div class="tiny">${x.min} min · ${pace(x.miles,x.min)}/mi${x.gained?` · +${x.gained} level`:""}</div></div>
+        <div class="tiny">${new Date(x.date).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</div></div>`).join("")
+        :`<div class="empty">No runs yet.<br>Tap ＋ to log one.</div>`}
+    </div>
+    <button class="btn p" style="margin-bottom:20px" onclick="logRunSheet()">Log a run</button>`;
+};
+function ladderRun(cur){
+  const rows=[]; let lv=1, floor=0;
+  while(lv<cur+4){ const inc=Level.runIncrement(lv); floor+=inc; lv++;
+    if(lv>=Math.max(2,cur-1)) rows.push({lv,mi:floor});
+    if(rows.length>6) break; }
+  return rows.map(r=>`<div class="lrow"><div class="nm"><b>Level ${r.lv}</b></div>
+    <span class="lvpill ${r.lv<=cur?"r":""}">${r.lv<=cur?"✓ ":""}${fmt(r.mi,0)} mi</span></div>`).join("");
+}
+
+/* ---------------- STRENGTH STATS PAGE ---------------- */
+PAGES.strength=function(){
+  const st=stats();
+  const ls=liftsSince(weekAgo(6)), vol7=ls.reduce((a,l)=>a+l.vol,0);
+  const w4=[0,1,2,3].map(i=>{
+    const end=weekAgo(i*7), start=weekAgo(i*7+6);
+    const x=S.liftLog.filter(l=>{const t=new Date(l.date).getTime(); return t>=start&&t<end+864e5;});
+    return {v:x.reduce((a,l)=>a+l.vol,0),n:x.length};
+  });
+  const totVol=Object.values(S.movements).reduce((a,m)=>a+m.volume,0);
+  const byGroup={};
+  Object.keys(S.movements).forEach(k=>{ if(!S.movements[k].volume) return;
+    const g=(LIBMAP[k]||{}).group||"Other"; byGroup[g]=byGroup[g]||{vol:0,lv:[],n:0};
+    byGroup[g].vol+=S.movements[k].volume; byGroup[g].lv.push(Level.str(S.movements[k].volume).level); byGroup[g].n++; });
+  const sInfo=strengthProgress(st);
+  const moves=st.trained.map(k=>({k,p:Level.str(S.movements[k].volume),vol:S.movements[k].volume}))
+                        .sort((a,b)=>b.p.level-a.p.level||b.vol-a.vol);
+  return head("Strength","Overall Level "+fmt(st.strLevel,2),"home")
+  + `<div class="card" style="text-align:center;padding-top:22px">
+      ${ring(sInfo.pct,"Overall","L"+fmt(st.strLevel,1),"var(--str)",148,12)}
+      <div style="margin-top:16px;font-size:15px;font-weight:650;color:var(--dim)">Average level across ${st.trained.length} trained movement${st.trained.length===1?"":"s"}</div>
+      <div class="tiny" style="margin-top:8px;line-height:1.5">Each movement levels on its own volume, so one runaway lift can't carry your overall level.</div>
+    </div>
+    <div class="grid2">
+      <div class="stat"><b style="color:var(--str)">${(vol7/1000).toFixed(1)}k</b><span>Volume this week</span></div>
+      <div class="stat"><b>${(totVol/1000).toFixed(1)}k</b><span>Lifetime volume</span></div>
+      <div class="stat"><b>${S.totals.lifts}</b><span>Lifts logged</span></div>
+      <div class="stat"><b>${ls.length}</b><span>Sessions this week</span></div>
+    </div>
+    <div class="card"><div class="ctitle">4-Week Volume</div>
+      ${w4.map((w,i)=>`<div class="row" style="margin-bottom:11px">
+        <span class="muted" style="width:74px;font-size:12.5px">${i===0?"This week":i+" wk ago"}</span>
+        <div class="bar" style="flex:1"><i style="width:${Math.min(100,(w.v/Math.max(1,...w4.map(x=>x.v)))*100)}%;background:var(--str)"></i></div>
+        <span style="width:60px;text-align:right;font-size:12.5px;font-weight:700">${(w.v/1000).toFixed(1)}k</span></div>`).join("")}
+    </div>
+    ${Object.keys(byGroup).length?`<div class="card"><div class="ctitle">By Muscle Group</div>
+      ${GROUPS.concat("Other").filter(g=>byGroup[g]).map(g=>{
+        const b=byGroup[g], avg=b.lv.reduce((x,y)=>x+y,0)/b.lv.length;
+        return `<div class="lrow"><span class="dot" style="background:${GCOLOR[g]||"#8b97a8"}"></span>
+        <div class="nm"><b>${g}</b><div class="tiny">${b.n} movement${b.n===1?"":"s"} · ${(b.vol/1000).toFixed(1)}k lb</div></div>
+        <span class="lvpill s">L${fmt(avg,1)}</span></div>`;}).join("")}
+    </div>`:""}
+    <div class="card"><div class="ctitle">Movement Levels <span style="color:var(--dim2)">tap for detail</span></div>
+      ${moves.length?moves.map(m=>`<button class="mvitem" onclick="nav('movement','${enc(m.k)}')">
+        <div style="flex:1;min-width:0;padding-right:10px">
+          <b style="font-size:14.5px">${esc(m.k)}</b>
+          <div class="bar" style="margin-top:7px"><i style="width:${m.p.pct*100}%;background:${GCOLOR[(LIBMAP[m.k]||{}).group]||"var(--str)"}"></i></div>
+          <div class="tiny" style="margin-top:5px">${m.p.need.toLocaleString()} lb to L${m.p.level+1}</div></div>
+        <span class="lvpill s">L${m.p.level}</span></button>`).join("")
+        :`<div class="empty">No lifts logged yet.<br>Tap ＋ to log your first set.</div>`}
+    </div>
+    <div class="hstack" style="margin-bottom:20px">
+      <button class="btn b" onclick="logLiftSheet()">Log a lift</button>
+      <button class="btn g" onclick="browseLibrary()">Movement library</button>
+    </div>`;
+};
+
+/* ---------------- SINGLE MOVEMENT PAGE ---------------- */
+PAGES.movement=function(param){
+  const name=decodeURIComponent(param||"");
+  const m=S.movements[name]||{volume:0,sets:0};
+  const info=LIBMAP[name]||{}, p=Level.str(m.volume), g=info.group||"Other";
+  const sub=(info.sub&&info.sub.length)?info.sub:null;
+  const hist=S.liftLog.filter(l=>l.move===name).reverse();
+  const ladder=[]; let lv=1,f=0;
+  while(lv<p.level+4){ f+=Level.strIncrement(lv); lv++; if(lv>=Math.max(2,p.level-1)) ladder.push({lv,v:f}); if(ladder.length>6) break; }
+  return head(name,g+" · Level "+p.level,"strength")
+  + `<div class="card" style="text-align:center;padding-top:22px">
+      ${ring(p.pct,"Level "+p.level,fmt(p.pct*100,0)+"%",GCOLOR[g]||"var(--str)",140,12)}
+      <div style="margin-top:16px;font-size:18px;font-weight:750">${p.need.toLocaleString()} lb to Level ${p.level+1}</div>
+      <div class="muted" style="margin-top:5px">${Math.round(m.volume).toLocaleString()} of ${p.next.toLocaleString()} lb volume</div>
+    </div>
+    <div class="grid2">
+      <div class="stat"><b>${m.sets||0}</b><span>Sets logged</span></div>
+      <div class="stat"><b>${m.best?m.best.w+"×"+m.best.r:"—"}</b><span>Best set</span></div>
+    </div>
+    ${sub?`<div class="card"><div class="ctitle">Muscles worked</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <span class="lvpill s" style="background:${GCOLOR[g]||"#8b97a8"};color:#fff">${g} (primary)</span>
+        ${sub.map(mu=>`<span class="lvpill">${esc(mu)}</span>`).join("")}</div></div>`:""}
+    <div class="card"><div class="ctitle">Level Ladder</div>
+      ${ladder.map(r=>`<div class="lrow"><div class="nm"><b>Level ${r.lv}</b></div>
+        <span class="lvpill ${r.lv<=p.level?"s":""}">${r.lv<=p.level?"✓ ":""}${r.v.toLocaleString()} lb</span></div>`).join("")}
+    </div>
+    <div class="card"><div class="ctitle">History</div>
+      ${hist.length?hist.slice(0,20).map(l=>`<div class="lrow">
+        <div class="nm"><b>${l.sets.map(s=>s.w+"×"+s.r).join("  ")}</b><div class="tiny">${Math.round(l.vol).toLocaleString()} lb volume</div></div>
+        <div class="tiny">${new Date(l.date).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</div></div>`).join("")
+        :`<div class="empty">Nothing logged for this movement yet.</div>`}
+    </div>
+    <button class="btn b" style="margin-bottom:20px" onclick="logLiftSheet('${enc(name)}')">Log ${esc(name)}</button>`;
+};
+</script>
+<script>
+function enc(s){ return encodeURIComponent(s).replace(/'/g,"%27"); }
+
+/* ---------------- SKILL TREE ---------------- */
+PAGES.tree=function(){
+  const st=stats();
+  const byG={};
+  st.trained.forEach(k=>{ const g=(LIBMAP[k]||{}).group||"Other"; (byG[g]=byG[g]||[]).push(k); });
+  return head("Skill Tree","Every branch levels on its own")
+  + `<div class="card" style="text-align:center;padding:24px 16px">
+      ${ring(Math.min(1,st.hybrid/20),"Hybrid",st.hybrid.toFixed(2),"var(--hyb)",156,13)}
+      <div style="margin-top:16px;font-size:14px;color:var(--dim);line-height:1.55">
+        Base (L${st.run.level} + L${fmt(st.strLevel,1)}) ÷ 2, adjusted for balance.<br>
+        <span class="tiny">${balanceNote(st)}</span></div>
+    </div>
+    <button class="card tap" style="width:100%;text-align:left" onclick="nav('running',null)">
+      <div class="row"><div style="flex:1">
+        <div class="ctitle" style="margin-bottom:8px;color:var(--run)">Cardio Branch</div>
+        <div style="font-size:20px;font-weight:800">Running · Level ${st.run.level}</div>
+        <div class="bar" style="margin-top:10px"><i style="width:${st.run.pct*100}%;background:var(--run)"></i></div>
+        <div class="tiny" style="margin-top:6px">${fmt(st.run.need,1)} mi to L${st.run.level+1} · ${fmt(S.totals.miles,1)} mi total</div>
+      </div><span class="chev">›</span></div></button>
+    <button class="card tap" style="width:100%;text-align:left" onclick="nav('strength',null)">
+      <div class="row"><div style="flex:1">
+        <div class="ctitle" style="margin-bottom:8px;color:var(--str)">Strength Branch</div>
+        <div style="font-size:20px;font-weight:800">Overall · Level ${fmt(st.strLevel,2)}</div>
+        <div class="tiny" style="margin-top:8px">Average of ${st.trained.length} trained movement${st.trained.length===1?"":"s"}</div>
+      </div><span class="chev">›</span></div></button>
+    ${Object.keys(byG).length?Object.keys(byG).map(g=>`
+      <div class="card"><div class="ctitle"><span style="color:${GCOLOR[g]||"#8b97a8"}">${g}</span>
+        <span>${byG[g].length}</span></div>
+        ${byG[g].map(k=>{const p=Level.str(S.movements[k].volume);
+          return `<button class="mvitem" onclick="nav('movement','${enc(k)}')">
+            <div style="flex:1;min-width:0;padding-right:10px"><b style="font-size:14px">${esc(k)}</b>
+            <div class="bar" style="margin-top:7px"><i style="width:${p.pct*100}%;background:${GCOLOR[g]||"var(--str)"}"></i></div>
+            <div class="tiny" style="margin-top:5px">${p.need.toLocaleString()} lb to L${p.level+1}</div></div>
+            <span class="lvpill s">L${p.level}</span></button>`;}).join("")}
+      </div>`).join("")
+      :`<div class="card"><div class="empty">Your strength branches unlock as you log lifts.<br>Every movement carries its own level.</div>
+        <button class="btn b sm" onclick="logLiftSheet()">Log a lift</button></div>`}
+    <div class="card"><div class="ctitle">How Leveling Works</div>
+      <div class="muted" style="font-size:13px;line-height:1.65">
+        <b style="color:var(--txt)">Running</b> — cumulative miles. L2 at 1 mi, then 3, 6, 10, 15, 24, 37, 54, 75 — after that a level every 50 miles.<br><br>
+        <b style="color:var(--txt)">Strength</b> — each movement levels on its own volume (weight × reps): 100, 250, 450, 750, 1,250 lb and up, plateauing at 2,000 lb per level.<br><br>
+        <b style="color:var(--txt)">Overall strength</b> — the average level of every movement you've trained, so one runaway lift can't carry you.<br><br>
+        <b style="color:var(--txt)">Hybrid Index</b> — the average of your cardio and strength levels, cut by up to 25% if the two are lopsided.
+      </div></div><div style="height:20px"></div>`;
+};
+
+/* ---------------- FUEL ---------------- */
+PAGES.fuel=function(){
+  const m=dayFuel(), t=fuelTargets();
+  const pGoal=proteinGoal(t), cGoal=t?t.target:0;
+  const pPct=Math.min(1,m.p/(pGoal||1));
+  const cPct=cGoal?Math.min(1,m.kcal/cGoal):0;
+
+  // Seven days of both trackers.
+  const week=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const f=dayFuel(dkey(d));
+    week.push({p:f.p,kcal:f.kcal,lbl:["S","M","T","W","T","F","S"][d.getDay()]});
+  }
+
+  const setup = !t ? `<div class="card" style="border-color:var(--run)">
+      <div class="ctitle" style="color:var(--run)">Calorie tracking is off</div>
+      <div class="muted" style="font-size:13.5px;line-height:1.6;margin-bottom:14px">
+        Add your sex, height and age and this turns into a full calorie tracker —
+        one that already knows what today's run and lift cost you.</div>
+      <button class="btn p sm" onclick="nav('settings',null)">Set it up</button>
+    </div>` : "";
+
+  const rings = t ? `<div class="card" style="padding:20px 12px 18px">
+      <div class="grid2" style="gap:6px;text-align:center">
+        <div>${ring(cPct,"Calories",Math.round(m.kcal).toLocaleString(),"var(--run)",132,11)}
+          <div class="muted" style="margin-top:11px;font-size:13px">${Math.max(0,Math.round(cGoal-m.kcal)).toLocaleString()} left of ${cGoal.toLocaleString()}</div></div>
+        <div>${ring(pPct,"Protein",Math.round(m.p)+"g","var(--hyb)",132,11)}
+          <div class="muted" style="margin-top:11px;font-size:13px">${Math.max(0,Math.round(pGoal-m.p))}g left of ${pGoal}g</div></div>
+      </div>
+      ${S.profile.trackFC?`<div style="margin-top:18px;padding:0 6px">
+        ${[["Carbs",m.c,t.carbs,"var(--str)"],["Fat",m.f,t.fat,"var(--warn)"]].map(x=>`
+          <div class="row" style="margin-bottom:6px"><span class="tiny">${x[0]}</span>
+            <span class="tiny">${Math.round(x[1])} / ${x[2]}g</span></div>
+          <div class="bar" style="margin-bottom:12px"><i style="width:${Math.min(100,(x[1]/(x[2]||1))*100)}%;background:${x[3]}"></i></div>`).join("")}
+      </div>`:""}
+    </div>` : `<div class="card" style="text-align:center;padding-top:22px">
+      ${ring(pPct,"Protein",Math.round(m.p)+"g","var(--hyb)",148,12)}
+      <div style="margin-top:15px;font-size:15px;color:var(--dim)">${Math.max(0,Math.round(pGoal-m.p))}g left of ${pGoal}g</div>
+      ${S.profile.trackFC?`<div class="grid2" style="margin-top:16px">
+        <div class="stat" style="background:#101722"><b>${Math.round(m.f)}g</b><span>Fat</span></div>
+        <div class="stat" style="background:#101722"><b>${Math.round(m.c)}g</b><span>Carbs</span></div></div>`:""}
+    </div>`;
+
+  // The whole point of a hybrid app: today's target is built from today's training.
+  const burn = t ? `<div class="card"><div class="ctitle">Where today's number comes from
+      <span style="color:var(--dim2)">${t.model==="training_load"?"Training load":"Activity level"}</span></div>
+    <div class="lrow"><div class="nm"><b>Resting burn</b><div class="tiny">${t.formula}</div></div>
+      <span class="tiny">${t.bmr.toLocaleString()}</span></div>
+    ${t.model==="training_load"?`
+      <div class="lrow"><div class="nm"><b>Living</b><div class="tiny">${Fuel.NEATNAME[S.profile.neat]||"Desk job"}</div></div>
+        <span class="tiny">+${Math.round(t.bmr*((Fuel.NEAT[S.profile.neat]||1.2)-1)).toLocaleString()}</span></div>
+      ${t.source==="today"?`
+        <div class="lrow"><div class="nm"><b>Running today</b><div class="tiny">${t.burn.runMin?t.burn.runMin+" min logged":"nothing logged"}</div></div>
+          <span class="tiny" style="color:var(--run)">+${Math.round(t.burn.run).toLocaleString()}</span></div>
+        <div class="lrow"><div class="nm"><b>Lifting today</b><div class="tiny">${t.burn.liftMin?t.burn.liftMin+" min logged":"nothing logged"}</div></div>
+          <span class="tiny" style="color:var(--str)">+${Math.round(t.burn.lift).toLocaleString()}</span></div>`
+      :`<div class="lrow"><div class="nm"><b>Training</b>
+          <div class="tiny">${t.source==="average"?"nothing logged yet — using your 7-day average":"nothing logged yet — using your stated activity level"}</div></div>
+          <span class="tiny" style="color:var(--dim)">+${t.exercise.toLocaleString()}</span></div>`}`
+    :`<div class="lrow"><div class="nm"><b>Activity</b><div class="tiny">${Fuel.ACTNAME[S.profile.activity]||"Moderately active"}</div></div>
+        <span class="tiny">×${Fuel.ACT[S.profile.activity]||1.55}</span></div>`}
+    ${t.bfBurn>0?`<div class="lrow"><div class="nm"><b>Breastfeeding</b>
+      <div class="tiny">${bfCountToday()} feed${bfCountToday()===1?"":"s"} today · ${Fuel.BF_KCAL_PER_FEED} kcal each</div></div>
+      <span class="tiny" style="color:var(--hyb)">+${t.bfBurn.toLocaleString()}</span></div>`:""}
+    <div class="lrow"><div class="nm"><b>Total burn</b></div><span class="tiny">${t.tdee.toLocaleString()}</span></div>
+    ${t.adj?`<div class="lrow"><div class="nm"><b>${t.goal==="lose"?"Deficit":"Surplus"}</b>
+      <div class="tiny">${t.rate}% of bodyweight a week</div></div>
+      <span class="tiny" style="color:${t.adj<0?"#e5484d":"var(--hyb)"}">${t.adj>0?"+":""}${t.adj.toLocaleString()}</span></div>`:""}
+    <div class="lrow" style="border-top:1px solid var(--line);margin-top:4px;padding-top:12px">
+      <div class="nm"><b style="font-size:15px">Eat</b></div>
+      <span style="font-weight:800;font-size:16px">${t.target.toLocaleString()}</span></div>
+    ${t.model==="training_load"?`<div class="tiny" style="margin-top:10px;line-height:1.5">
+      ${t.source==="today"
+        ? "This moves with your training. Log a long run and the target goes up with it."
+        : "As soon as you log today's session this switches to what you actually did."}</div>`:""}
+  </div>` : "";
+
+  const flags = (t&&t.flags.length) ? t.flags.map(f=>`<div class="card" style="border-color:${f.s==="bad"?"#5c2327":"#4a3a1a"};background:${f.s==="bad"?"#1c1113":"#181509"}">
+      <div class="row" style="align-items:flex-start;gap:10px">
+        <span style="font-size:15px;line-height:1.2">${f.s==="bad"?"⚠":"•"}</span>
+        <div class="muted" style="flex:1;font-size:13px;line-height:1.6;color:${f.s==="bad"?"#ffb4b8":"#ffdc9e"}">${f.t}</div>
+      </div></div>`).join("") : "";
+
+  return head("Fuel",t?"Calories and protein":"Protein first")
+  + setup + rings + flags + burn
+  + `<div class="grid2" style="gap:10px;margin-bottom:12px">
+      ${t?`<div class="card" style="margin:0"><div class="ctitle">Calories · 7d</div>
+        <div class="spark">${week.map(w=>`<div style="height:${Math.max(4,Math.min(100,(w.kcal/(cGoal||1))*100))}%;background:${w.kcal>=cGoal*.9&&w.kcal<=cGoal*1.1?"var(--run)":"#4a2a17"}"></div>`).join("")}</div>
+        <div style="display:flex;gap:4px">${week.map(w=>`<div class="tiny" style="flex:1;text-align:center">${w.lbl}</div>`).join("")}</div></div>`:""}
+      <div class="card" style="margin:0${t?"":";grid-column:span 2"}"><div class="ctitle">Protein · 7d</div>
+        <div class="spark">${week.map(w=>`<div style="height:${Math.max(4,Math.min(100,(w.p/(pGoal||1))*100))}%;background:${w.p>=pGoal?"var(--hyb)":"#2b6e46"}"></div>`).join("")}</div>
+        <div style="display:flex;gap:4px">${week.map(w=>`<div class="tiny" style="flex:1;text-align:center">${w.lbl}</div>`).join("")}</div></div>
+    </div>
+    ${bfCard()}
+    ${recipesCard()}
+    <button class="btn g" style="margin-bottom:12px" onclick="addFoodSheet()">+ Add food or supplement</button>
+    <div class="card"><div class="ctitle">Today <span style="color:var(--dim2)">${Math.round(m.kcal).toLocaleString()} kcal</span></div>
+      ${m.items.length?m.items.map((it,i)=>`<div class="lrow">
+        <div class="nm"><b>${esc(it.name)}</b><div class="tiny">${Math.round(foodKcal(it))} kcal · ${it.p}g protein${S.profile.trackFC?` · ${it.c||0}g carbs · ${it.f||0}g fat`:""}</div></div>
+        <button class="tiny" style="color:#e5484d;font-weight:700" onclick="delFood(${i})">Remove</button></div>`).join("")
+        :`<div class="empty">Nothing logged today.</div>`}
+    </div>
+    ${t?`<div class="card"><div class="ctitle">Worth watching</div>
+      <div class="muted" style="font-size:13px;line-height:1.65">
+        <b style="color:var(--txt)">Iron ${Fuel.micros().iron} mg</b> · calcium ${Fuel.micros().calcium} mg · vitamin D ${Fuel.micros().vitD} IU<br><br>
+        ${Fuel.micros().note}</div></div>`:""}
+    <div style="height:20px"></div>`;
+};
+/* Calories for one logged item. Entries from before calorie tracking existed
+   have no stored value, so fall back to 4/4/9 rather than counting them as zero. */
+function foodKcal(it){
+  return it.kcal!=null ? it.kcal : (it.p||0)*4+(it.c||0)*4+(it.f||0)*9;
+}
+function addFoodSheet(){
+  const fc=S.profile.trackFC;
+  sheet(`<h3>Add food</h3>
+    <label class="lb">Name</label><input class="fld" id="fn" placeholder="Chicken, shake, bar…" style="margin-bottom:12px">
+    <div class="hstack" style="margin-bottom:12px">
+      <div><label class="lb">Calories</label><input class="fld" id="fk" type="number" inputmode="numeric" placeholder="auto"></div>
+      <div><label class="lb">Protein (g)</label><input class="fld" id="fp" type="number" inputmode="decimal" oninput="autoKcal()"></div>
+    </div>
+    ${fc?`<div class="hstack" style="margin-bottom:12px">
+      <div><label class="lb">Carbs (g)</label><input class="fld" id="fc" type="number" inputmode="decimal" oninput="autoKcal()"></div>
+      <div><label class="lb">Fat (g)</label><input class="fld" id="ff" type="number" inputmode="decimal" oninput="autoKcal()"></div></div>`:""}
+    <div class="tiny" style="margin:-4px 0 14px 2px">Leave calories blank and we'll work them out from the macros.</div>
+    <button class="btn p" onclick="addFood()">Add</button>`,
+    {after:s=>{ const i=s.querySelector("#fn"); i&&i.focus(); }});
+}
+/* Live estimate in the calories placeholder as macros get typed. */
+function autoKcal(){
+  const g=id=>+((document.getElementById(id)||{}).value)||0;
+  const est=g("fp")*4+g("fc")*4+g("ff")*9;
+  const k=document.getElementById("fk");
+  if(k) k.placeholder = est>0 ? String(Math.round(est)) : "auto";
+}
+function addFood(){
+  const g=id=>+((document.getElementById(id)||{}).value)||0;
+  const n=document.getElementById("fn").value.trim()||"Food";
+  const p=g("fp"), f=g("ff"), c=g("fc");
+  const kcal = g("fk") || Math.round(p*4+c*4+f*9);
+  if(!p&&!f&&!c&&!kcal){ toast("Nothing to log","Add calories or macros."); return; }
+  const k=todayKey();
+  const m = S.macros[k] = S.macros[k]||{p:0,f:0,c:0,items:[]};
+  if(m.kcal==null) m.kcal=(m.p||0)*4+(m.c||0)*4+(m.f||0)*9;  // backfill legacy days
+  m.items.push({name:n,p,f,c,kcal});
+  m.p+=p; m.f+=f; m.c+=c; m.kcal+=kcal;
+  save(); closeSheet(); repaint();
+  toast("Logged "+n, kcal?`${Math.round(kcal)} kcal · ${p}g protein`:`${p}g protein`);
+}
+function delFood(i){
+  const k=todayKey(), m=S.macros[k]; if(!m) return;
+  const it=m.items[i]; if(!it) return;
+  if(m.kcal==null) m.kcal=(m.p||0)*4+(m.c||0)*4+(m.f||0)*9;
+  m.p-=it.p||0; m.f-=it.f||0; m.c-=it.c||0; m.kcal=Math.max(0,m.kcal-foodKcal(it));
+  m.items.splice(i,1);
+  save(); repaint();
+}
+
+/* ---- breastfeeding tracker (Fuel tab) ---- */
+function bfCountToday(){
+  const d=S.macros[todayKey()];
+  if(d&&d.bf!=null) return d.bf;              // an explicit count for today
+  return +S.profile.feedsPerDay||0;           // else the signup average
+}
+function isBreastfeeding(){ return S.profile.sex==="female" && S.profile.breastfeeding==="yes"; }
+function setBf(delta){
+  const k=todayKey();
+  const m = S.macros[k] = S.macros[k]||{p:0,f:0,c:0,items:[]};
+  const cur = m.bf!=null ? m.bf : (+S.profile.feedsPerDay||0);
+  m.bf = Math.max(0, cur+delta);
+  save(); repaint();
+}
+function bfCard(){
+  if(!isBreastfeeding()) return "";
+  const n=bfCountToday(), logged=S.macros[todayKey()]&&S.macros[todayKey()].bf!=null;
+  const burn=Fuel.breastfeedingBurn(n);
+  return `<div class="card"><div class="ctitle">Breastfeeding
+      <span style="color:var(--hyb)">+${burn.toLocaleString()} kcal today</span></div>
+    <div class="row">
+      <div><div class="big" style="color:var(--hyb)">${n}</div>
+        <div class="muted" style="margin-top:6px">feed${n===1?"":"s"} today${logged?"":" · signup average"}</div></div>
+      <div class="hstack" style="flex:0 0 auto;gap:10px">
+        <button class="btn g sm" style="width:52px" onclick="setBf(-1)">−</button>
+        <button class="btn b sm" style="width:52px" onclick="setBf(1)">＋</button></div>
+    </div>
+    <div class="tiny" style="margin-top:12px;line-height:1.5">Each nursing or pumping session adds about ${Fuel.BF_KCAL_PER_FEED} kcal to today's target. Tap ＋ each time you feed, or set an average at signup.</div>
+  </div>`;
+}
+
+/* ---------------- RANKS ---------------- */
+const FRIENDS=[{name:"Nick Bare",run:14,str:11.4},{name:"Marcus T.",run:9,str:13.2},
+  {name:"Dana R.",run:16,str:6.1},{name:"Kyle W.",run:7,str:8.4},{name:"Priya S.",run:11,str:9.8}];
+let rankMode="hy";
+function board(){
+  const st=stats();
+  const rows=FRIENDS.map(f=>({name:f.name,run:f.run,str:f.str,hy:Level.hybrid(f.run,f.str),me:false}));
+  rows.push({name:S.profile.name||"You",run:st.run.level,str:st.strLevel,hy:st.hybrid,me:true});
+  rows.sort((a,b)=> rankMode==="run"? b.run-a.run : rankMode==="str"? b.str-a.str : b.hy-a.hy);
+  return rows;
+}
+PAGES.ranks=function(){
+  const rows=board();
+  return head("Ranks","Who's the better all-around athlete")
+  + `<div class="seg">
+      <button class="${rankMode==="hy"?"on":""}" onclick="rankMode='hy';repaint()">Hybrid</button>
+      <button class="${rankMode==="run"?"on":""}" onclick="rankMode='run';repaint()">Cardio</button>
+      <button class="${rankMode==="str"?"on":""}" onclick="rankMode='str';repaint()">Strength</button></div>
+    <div class="card">${rows.map((r,i)=>`<div class="lrow" style="${r.me?"background:rgba(37,211,102,.07);margin:0 -16px;padding-left:16px;padding-right:16px":""}">
+      <div style="width:26px;font-weight:800;color:${i===0?"var(--warn)":"var(--dim2)"};font-size:15px">${i+1}</div>
+      <div class="nm"><b>${esc(r.name)}${r.me?" · you":""}</b>
+        <div class="tiny">Run L${fmt(r.run,0)} · Strength L${fmt(r.str,1)}</div></div>
+      <span class="lvpill ${r.me?"s":""}" style="font-size:13px">${rankMode==="run"?"L"+fmt(r.run,0):rankMode==="str"?"L"+fmt(r.str,1):r.hy.toFixed(2)}</span>
+      </div>`).join("")}</div>
+    <div class="card"><div class="ctitle">Note</div>
+      <div class="muted" style="font-size:13px;line-height:1.6">Friends are sample athletes for now — live syncing arrives with accounts. The Hybrid Index is what ranks you by default, so a pure runner or pure lifter can't top the board.</div>
+    </div><div style="height:20px"></div>`;
+};
+
+/* ---------------- SETTINGS ---------------- */
+PAGES.settings=function(){
+  const p=S.profile;
+  return head("Settings",null,"home")
+  + `<div class="card"><div class="ctitle">Profile</div>
+      <label class="lb">Display name</label><input class="fld" id="sn" value="${esc(p.name)}" style="margin-bottom:12px">
+      <label class="lb">Bodyweight (lb) — bodyweight movements and calorie math</label>
+      <input class="fld" id="sbw" type="number" inputmode="decimal" value="${p.bodyweight}" style="margin-bottom:12px">
+      <button class="opt ${p.trackFC?"sel":""}" onclick="S.profile.trackFC=!S.profile.trackFC;save();repaint()">
+        <b>${p.trackFC?"✓ ":""}Show carbs &amp; fat</b><span>Calories and protein show either way</span></button>
+      <button class="btn p sm" onclick="saveSettings()">Save</button>
+    </div>
+    ${settingsFuel(p)}
+    <div class="card"><div class="ctitle">Recipe Lookups <span style="color:${p.usdaKey?"var(--hyb)":"var(--dim2)"}">${p.usdaKey?"connected":"off"}</span></div>
+      <div class="muted" style="font-size:13px;line-height:1.6;margin-bottom:12px">
+        Saved recipes look up real nutrition from the free USDA food database. Paste a FoodData Central API key to turn it on —
+        without one you can still build recipes by typing macros in by hand.</div>
+      <label class="lb">USDA FoodData Central API key</label>
+      <input class="fld" id="susda" value="${esc(p.usdaKey||"")}" placeholder="paste key here" style="margin-bottom:8px">
+      <div class="tiny" style="margin:0 0 12px 2px">Free, instant, no card. Grab one at <b style="color:var(--txt)">fdc.nal.usda.gov/api-key-signup.html</b> — it emails you a key.</div>
+      <button class="btn p sm" onclick="saveUsdaKey()">Save key</button>
+      ${p.usdaKey?`<button class="btn ghost sm" style="margin-top:8px" onclick="usdaTest()">Test the connection</button>`:""}
+    </div>
+    <div class="card"><div class="ctitle">Plan</div>
+      <div class="row"><div><b>${p.premium?"HYBRID Premium":"Free"}</b>
+        <div class="tiny" style="margin-top:4px">${p.premium?"Unlimited routines":"Up to 5 saved routines"}</div></div>
+        <button class="lvpill ${p.premium?"s":""}" style="padding:8px 13px" onclick="S.profile.premium=!S.profile.premium;save();repaint();toast(S.profile.premium?'Premium on':'Back to free')">${p.premium?"Turn off":"Try it"}</button></div>
+      <div class="tiny" style="margin-top:12px;line-height:1.5">Premium is a local demo toggle — no payment wired up yet.</div>
+    </div>
+    <div class="card"><div class="ctitle">Data</div>
+      <button class="btn g sm" style="margin-bottom:9px" onclick="exportData()">Export my data (JSON)</button>
+      <button class="btn ghost sm" style="color:#e5484d;border-color:#4a2226" onclick="wipe()">Erase everything</button>
+      <div class="tiny" style="margin-top:12px;line-height:1.5">Data lives in this browser only. Levels rebuild instantly from your logs.</div>
+    </div><div style="height:20px"></div>`;
+};
+function saveSettings(){
+  S.profile.name=document.getElementById("sn").value.trim()||S.profile.name;
+  S.profile.bodyweight=+document.getElementById("sbw").value||S.profile.bodyweight;
+  save(); toast("Saved"); repaint();
+}
+
+/* ---- Body & calories ---- */
+function settingsFuel(p){
+  const t=fuelTargets();
+  const ft=Math.floor((p.heightIn||0)/12), inch=(p.heightIn||0)%12;
+  const sel=(id,map,cur)=>`<select class="fld" id="${id}" style="margin-bottom:12px">
+    ${Object.keys(map).map(k=>`<option value="${k}"${cur===k?" selected":""}>${map[k]}</option>`).join("")}</select>`;
+  return `<div class="card"><div class="ctitle">Body &amp; Calories</div>
+    ${!t?`<div class="muted" style="font-size:13px;line-height:1.6;margin-bottom:14px">
+      Fill these in and the Fuel tab becomes a calorie tracker that already knows
+      what your training cost you today.</div>`:""}
+    <label class="lb">Biological sex — sets the equation, fat floor and iron target</label>
+    <div class="hstack" style="margin-bottom:12px">
+      <button class="opt ${p.sex==="male"?"sel":""}" style="margin:0" onclick="setFuel('sex','male')"><b>Male</b></button>
+      <button class="opt ${p.sex==="female"?"sel":""}" style="margin:0" onclick="setFuel('sex','female')"><b>Female</b></button>
+    </div>
+    ${p.sex==="female"?`
+      <button class="opt ${p.breastfeeding==="yes"?"sel":""}" onclick="setFuel('breastfeeding','${p.breastfeeding==="yes"?"no":"yes"}')">
+        <b>${p.breastfeeding==="yes"?"✓ ":""}Breastfeeding mother</b><span>Adds the calories of making milk to your daily target</span></button>
+      ${p.breastfeeding==="yes"?`<label class="lb">Average feeds or pumps a day</label>
+        <input class="fld" id="sfeeds" type="number" inputmode="numeric" value="${p.feedsPerDay||""}" placeholder="8" style="margin-bottom:6px">
+        <div class="tiny" style="margin:0 0 12px 2px">≈ ${Fuel.breastfeedingBurn(+p.feedsPerDay||0).toLocaleString()} kcal/day at ${Fuel.BF_KCAL_PER_FEED} kcal a feed. Log the exact count each day on the Fuel tab.</div>`:""}`:""}
+    <label class="lb">Height</label>
+    <div class="hstack" style="margin-bottom:12px">
+      <div><input class="fld" id="sft" type="number" inputmode="numeric" placeholder="ft" value="${ft||""}"></div>
+      <div><input class="fld" id="sin" type="number" inputmode="decimal" placeholder="in" value="${p.heightIn?inch:""}"></div>
+    </div>
+    <div class="tiny" style="margin:-8px 0 12px 2px">Feet and inches</div>
+    <div class="hstack" style="margin-bottom:12px">
+      <div><label class="lb">Age</label><input class="fld" id="sage" type="number" inputmode="numeric" value="${p.age||""}"></div>
+      <div><label class="lb">Body fat % (optional)</label><input class="fld" id="sbf" type="number" inputmode="decimal" placeholder="—" value="${p.bodyFat||""}"></div>
+    </div>
+    <button class="opt ${p.bmrManual?"sel":""}" onclick="setFuel('bmrManual',${!p.bmrManual})">
+      <b>${p.bmrManual?"✓ ":""}Set my own resting calories</b><span>${p.bmrManual?"Using your number":"Using the calculated "+(Fuel.ready()?Fuel.bmrAuto().toLocaleString():"estimate")}</span></button>
+    ${p.bmrManual?`<label class="lb">Resting calories (BMR) per day</label>
+      <input class="fld" id="sbmr" type="number" inputmode="numeric" value="${+p.bmrCustom||(Fuel.ready()?Fuel.bmrAuto():"")}" placeholder="${Fuel.ready()?Fuel.bmrAuto():"1600"}" style="margin-bottom:6px">
+      <div class="tiny" style="margin:0 0 12px 2px">The calories you'd burn at complete rest. If you've had this measured (a metabolic test or a wearable you trust), enter it here. The equation still suggests ${Fuel.ready()?Fuel.bmrAuto().toLocaleString():"a value"}.</div>`:""}
+    <label class="lb">How the daily target is built</label>
+    ${sel("smodel",{training_load:"From my logged training",multiplier:"From an activity level"},p.calModel)}
+    ${p.calModel==="multiplier"
+      ? `<label class="lb">Activity level</label>${sel("sact",Fuel.ACTNAME,p.activity)}
+         <div class="tiny" style="margin:-6px 0 12px 2px">${Fuel.ACTDESC[p.activity]||""}</div>`
+      : `<label class="lb">Outside of training, your day is…</label>${sel("sneat",Fuel.NEATNAME,p.neat)}
+         <div class="tiny" style="margin:-6px 0 12px 2px">${Fuel.NEATDESC[p.neat]||""} — runs and lifts are counted separately from your logs.</div>`}
+    <label class="lb">Goal</label>
+    ${sel("sgoal",{lose:"Lose fat",maintain:"Maintain",gain:"Build"},p.calGoal)}
+    ${p.calGoal!=="maintain"?`<label class="lb">Rate — % of bodyweight per week</label>
+      <input class="fld" id="srate" type="number" inputmode="decimal" step="0.05" value="${p.calRate}" style="margin-bottom:6px">
+      <div class="tiny" style="margin:0 0 12px 2px">Capped at ${p.calGoal==="lose"?"1.0% — faster costs muscle and running economy":"0.5% — faster is mostly fat"}.</div>`:""}
+    <button class="opt ${p.proteinManual?"sel":""}" onclick="setFuel('proteinManual',${!p.proteinManual})">
+      <b>${p.proteinManual?"✓ ":""}Set my own protein target</b><span>${p.proteinManual?"Using your number":"Using the calculated "+(t?t.protein+"g":"target")}</span></button>
+    ${p.proteinManual?`<label class="lb">Daily protein target (g)</label>
+      <input class="fld" id="sp" type="number" inputmode="numeric" value="${p.proteinTarget}" style="margin-bottom:12px">`:""}
+    <button class="btn p sm" onclick="saveFuel()">Save</button>
+    ${t?`<div class="tiny" style="margin-top:14px;line-height:1.6">
+      Right now: <b style="color:var(--txt)">${t.target.toLocaleString()} kcal</b> · ${t.protein}g protein ·
+      ${t.carbs}g carbs · ${t.fat}g fat. Resting burn ${t.bmr.toLocaleString()} by ${t.formula}${t.lbm!=null?` (lean mass ${(t.lbm*2.20462).toFixed(0)} lb)`:""}.</div>`:""}
+  </div>`;
+}
+function setFuel(k,v){ S.profile[k]=v; save(); repaint(); }
+function saveFuel(){
+  const g=id=>{ const e=document.getElementById(id); return e? e.value : null; };
+  const n=id=>+g(id)||0;
+  const heightIn=n("sft")*12+n("sin"), age=n("sage"), bf=n("sbf");
+  if(heightIn && (heightIn<48||heightIn>90)){ toast("Check your height","Between 4'0\" and 7'6\"."); return; }
+  if(age && (age<13||age>100)){ toast("Check your age"); return; }
+  if(bf && (bf<3||bf>70)){ toast("Check your body fat %","Leave it blank if you're not sure."); return; }
+  const p=S.profile;
+  if(heightIn) p.heightIn=heightIn;
+  if(age){ p.age=age; p.ageYear=new Date().getFullYear(); }
+  p.bodyFat=bf;
+  if(g("smodel")) p.calModel=g("smodel");
+  if(g("sact")) p.activity=g("sact");
+  if(g("sneat")) p.neat=g("sneat");
+  if(g("sgoal")){
+    p.calGoal=g("sgoal");
+    if(p.calGoal==="maintain") p.calRate=0;
+    else if(!p.calRate) p.calRate = p.calGoal==="lose"?.75:.25;
+  }
+  if(g("srate")!==null) p.calRate=Math.min(Math.abs(+g("srate")||0), p.calGoal==="lose"?1:.5);
+  if(g("sp")!==null) p.proteinTarget=n("sp")||p.proteinTarget;
+  if(g("sbmr")!==null){
+    const bmr=n("sbmr");
+    if(bmr && (bmr<800||bmr>4000)){ toast("Check your resting calories","A realistic BMR is roughly 800–4,000."); return; }
+    p.bmrCustom=bmr;
+  }
+  if(g("sfeeds")!==null) p.feedsPerDay=n("sfeeds");
+  save(); repaint();
+  const t=fuelTargets();
+  toast("Saved", t?`${t.target.toLocaleString()} kcal · ${proteinGoal(t)}g protein`:"");
+}
+function exportData(){
+  const b=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+  a.download="hybrid-data.json"; a.click();
+}
+function wipe(){
+  sheet(`<h3>Erase everything?</h3><p class="muted" style="margin:0 0 16px">Every run, lift, level and routine goes away. This can't be undone.</p>
+    <button class="btn sm" style="background:#e5484d;color:#fff;margin-bottom:9px" onclick="localStorage.removeItem('${KEY}');localStorage.removeItem('${OLDKEY}');location.reload()">Erase</button>
+    <button class="btn g sm" onclick="closeSheet()">Cancel</button>`);
+}
+
+/* ---------------- TRAIN / ROUTINES ---------------- */
+const FREE_ROUTINES=5;
+PAGES.train=function(){
+  const cap=S.profile.premium?Infinity:FREE_ROUTINES;
+  return head("Train","Routines and logging")
+  + (S.active?`<div class="card" style="border-color:var(--run)">
+      <div class="ctitle" style="color:var(--run)">Workout in progress</div>
+      <div class="row"><div><b style="font-size:16px">${esc(S.active.name)}</b>
+        <div class="tiny" style="margin-top:4px">Started ${ago(S.active.start)} ago</div></div>
+        <button class="btn p sm" style="width:auto;padding:11px 18px" onclick="nav('workout',null)">Resume</button></div></div>`:"")
+  + `<div class="hstack" style="margin-bottom:14px">
+      <button class="btn p sm" onclick="logRunSheet()">Log run</button>
+      <button class="btn b sm" onclick="logLiftSheet()">Log lift</button></div>
+    <div class="card"><div class="ctitle">My Routines
+      <span>${S.routines.length}${S.profile.premium?"":" / "+FREE_ROUTINES}</span></div>
+      ${S.routines.length?S.routines.map((r,i)=>`<div class="lrow">
+        <div class="nm" onclick="nav('routine',${i})" style="cursor:pointer">
+          <b>${esc(r.name)}</b><div class="tiny">${routineSub(r)}</div></div>
+        <button class="lvpill" onclick="nav('routine',${i})" style="padding:7px 11px">Edit</button>
+        <button class="lvpill s" onclick="startRoutine(${i})" style="padding:7px 13px">Start</button></div>`).join("")
+        :`<div class="empty">No routines yet.<br>Build one so a full day logs itself.</div>`}
+    </div>
+    ${S.routines.length>=cap?`<div class="lock">
+        <b style="font-size:15px">Routine limit reached</b>
+        <div class="muted" style="font-size:13px;margin-top:6px;line-height:1.5">Free plan saves ${FREE_ROUTINES} routines. Premium unlocks unlimited.</div>
+        <button class="btn b sm" style="margin-top:12px" onclick="nav('settings',null)">See plans</button></div>`
+      :`<button class="btn g" onclick="newRoutine()">+ New routine</button>`}
+    <button class="btn ghost sm" style="margin:12px 0 20px" onclick="browseLibrary()">Browse movement library (${LIB.length})</button>`;
+};
+function newRoutine(){
+  const cap=S.profile.premium?Infinity:FREE_ROUTINES;
+  if(S.routines.length>=cap){ toast("Routine limit","Free plan saves "+FREE_ROUTINES+"."); return; }
+  S.routines.push({name:"New Routine",exercises:[],run:{miles:0,when:"after"}});
+  save(); nav("routine",S.routines.length-1);
+}
+PAGES.routine=function(i){
+  const r=S.routines[i]; if(!r) return head("Not found",null,"train");
+  return head("Edit Routine",null,"train")
+  + `<div class="card">
+      <label class="lb">Routine name</label>
+      <input class="fld" id="rn" value="${esc(r.name)}" onchange="S.routines[${i}].name=this.value||'Routine';save()" style="margin-bottom:6px">
+      <div class="tiny">e.g. “Monday — Chest + 4 mi”</div>
+    </div>
+    <div class="card"><div class="ctitle">Lifting</div>
+      ${r.exercises.length?r.exercises.map((e,j)=>`<div class="lrow">
+        <div class="nm"><b>${esc(e.move)}</b><div class="tiny">${(LIBMAP[e.move]||{}).group||"Other"} · target ${e.sets} sets × ${e.reps}</div></div>
+        <button class="tiny" style="color:#e5484d;font-weight:700" onclick="rmEx(${i},${j})">Remove</button></div>`).join("")
+        :`<div class="empty">No exercises yet.</div>`}
+      <button class="btn g sm" style="margin-top:12px" onclick="pickMove(m=>addEx(${i},m))">+ Add exercise</button>
+    </div>
+    <div class="card"><div class="ctitle">Running</div>
+      <label class="lb">Distance (miles) — 0 for none</label>
+      <input class="fld" type="number" inputmode="decimal" value="${r.run.miles||0}"
+        onchange="S.routines[${i}].run.miles=+this.value||0;save();repaint()" style="margin-bottom:12px">
+      <div class="hstack">
+        <button class="opt ${r.run.when==="before"?"sel":""}" style="margin:0" onclick="S.routines[${i}].run.when='before';save();repaint()"><b>Before lifting</b></button>
+        <button class="opt ${r.run.when==="after"?"sel":""}" style="margin:0" onclick="S.routines[${i}].run.when='after';save();repaint()"><b>After lifting</b></button></div>
+    </div>
+    <div class="hstack" style="margin-bottom:20px">
+      <button class="btn g" onclick="delRoutine(${i})" style="color:#e5484d">Delete</button>
+      <button class="btn p" onclick="startRoutine(${i})">Start routine</button></div>`;
+};
+function addEx(i,move){ S.routines[i].exercises.push({move,sets:3,reps:8}); save(); closeSheet(); repaint(); }
+function rmEx(i,j){ S.routines[i].exercises.splice(j,1); save(); repaint(); }
+function delRoutine(i){ S.routines.splice(i,1); save(); nav("train",null); toast("Routine deleted"); }
+
+/* ---------------- ACTIVE WORKOUT ---------------- */
+function startRoutine(i){
+  const r=S.routines[i]; if(!r) return;
+  S.active={rid:i,name:r.name,start:Date.now(),
+    ex:r.exercises.map(e=>({move:e.move,sets:Array.from({length:e.sets},()=>({w:LIBMAP[e.move]&&LIBMAP[e.move].bw?S.profile.bodyweight:"",r:e.reps,done:false}))})),
+    run:{miles:r.run.miles||0,min:"",when:r.run.when,done:false}};
+  save(); nav("workout",null);
+}
+PAGES.workout=function(){
+  const a=S.active; if(!a) return head("No workout",null,"train");
+  const runBlock=a.run.miles?`<div class="card" style="border-color:${a.run.done?"var(--hyb)":"var(--line)"}">
+      <div class="ctitle" style="color:var(--run)">Run · ${a.run.when==="before"?"before lifting":"after lifting"}</div>
+      <div class="hstack" style="align-items:flex-end">
+        <div><label class="lb">Miles</label><input class="fld" id="wmi" type="number" inputmode="decimal" value="${a.run.miles}"></div>
+        <div><label class="lb">Minutes</label><input class="fld" id="wmin" type="number" inputmode="decimal" value="${a.run.min}"></div>
+      </div></div>`:"";
+  return `<div class="hd" style="padding-left:0;padding-right:0">
+      <div><button class="backbtn" onclick="nav('train',null)">‹ Save &amp; exit</button>
+      <h1>${esc(a.name)}</h1><div class="sub">Started ${ago(a.start)} ago</div></div></div>
+    ${a.run.when==="before"?runBlock:""}
+    ${a.ex.map((e,j)=>`<div class="card">
+      <div class="ctitle">${esc(e.move)}<span>${(LIBMAP[e.move]||{}).group||""}</span></div>
+      <div class="setrow"><span class="n">#</span><span class="tiny" style="text-align:center">LB</span>
+        <span class="tiny" style="text-align:center">REPS</span><span></span></div>
+      ${e.sets.map((s,k)=>`<div class="setrow">
+        <span class="n">${k+1}</span>
+        <input type="number" inputmode="decimal" value="${s.w}" data-e="${j}" data-s="${k}" data-f="w" placeholder="0">
+        <input type="number" inputmode="numeric" value="${s.r}" data-e="${j}" data-s="${k}" data-f="r" placeholder="0">
+        <button class="chk ${s.done?"on":""}" onclick="toggleSet(${j},${k})">✓</button></div>`).join("")}
+      <button class="btn ghost sm" style="margin-top:6px" onclick="addSet(${j})">+ Add set</button>
+    </div>`).join("")}
+    ${a.ex.length?"":`<div class="card"><div class="empty">No exercises in this routine.</div>
+      <button class="btn g sm" onclick="pickMove(m=>addLiveEx(m))">+ Add exercise</button></div>`}
+    ${a.run.when==="after"?runBlock:""}
+    ${a.ex.length?`<button class="btn ghost sm" style="margin-bottom:12px" onclick="pickMove(m=>addLiveEx(m))">+ Add exercise</button>`:""}
+    <button class="btn p" onclick="finishWorkout()">Finish workout</button>
+    <button class="btn ghost sm" style="margin:10px 0 24px" onclick="cancelWorkout()">Discard</button>`;
+};
+AFTER.workout=function(){
+  document.querySelectorAll("#viewport input[data-e]").forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const s=S.active.ex[+inp.dataset.e].sets[+inp.dataset.s];
+      s[inp.dataset.f]= inp.value===""?"":+inp.value; save();
+    });
+  });
+  const mi=document.getElementById("wmi"), mn=document.getElementById("wmin");
+  if(mi) mi.addEventListener("input",()=>{ S.active.run.miles=+mi.value||0; save(); });
+  if(mn) mn.addEventListener("input",()=>{ S.active.run.min=mn.value===""?"":+mn.value; save(); });
+};
+function toggleSet(j,k){ const s=S.active.ex[j].sets[k]; s.done=!s.done; save(); repaint(); }
+function addSet(j){ const e=S.active.ex[j], last=e.sets[e.sets.length-1]||{w:"",r:8};
+  e.sets.push({w:last.w,r:last.r,done:false}); save(); repaint(); }
+function addLiveEx(move){
+  S.active.ex.push({move,sets:[{w:LIBMAP[move]&&LIBMAP[move].bw?S.profile.bodyweight:"",r:8,done:false}]});
+  save(); closeSheet(); repaint();
+}
+function cancelWorkout(){ S.active=null; save(); nav("train",null); toast("Workout discarded"); }
+function finishWorkout(){
+  const a=S.active; if(!a) return;
+  const before=snapshot();
+  const runMin=+a.run.min||0;
+  // Real session duration, minus any running, split across exercises by set
+  // count — so the calorie side gets a measured number instead of an estimate.
+  const elapsed=Math.max(0,Math.round((Date.now()-a.start)/60000)-runMin);
+  const totalSets=a.ex.reduce((n,e)=>n+e.sets.filter(s=>s.done&&+s.w>0&&+s.r>0).length,0);
+  let anySets=false;
+  a.ex.forEach(e=>{
+    const sets=e.sets.filter(s=>s.done && +s.w>0 && +s.r>0).map(s=>({w:+s.w,r:+s.r}));
+    if(sets.length){
+      anySets=true;
+      const share = totalSets && elapsed ? Math.round(elapsed*sets.length/totalSets) : 0;
+      applyLift(e.move,sets,true,share);
+    }
+  });
+  const mi=+a.run.miles||0, min=+a.run.min||0;
+  if(mi>0) applyRun(mi,min||Math.round(mi*9),true);
+  if(!anySets && mi<=0){ toast("Nothing to log","Check off completed sets or add run distance."); return; }
+  S.active=null; save();
+  nav("home",null);
+  setTimeout(()=>reportLevels(before,"Workout complete"),260);
+}
+
+/* ---------------- LOGGING ---------------- */
+function snapshot(){
+  const st=stats();
+  return {run:st.run.level, str:st.strLevel, hy:st.hybrid,
+          moves:Object.fromEntries(Object.keys(S.movements).map(k=>[k,Level.str(S.movements[k].volume).level]))};
+}
+function reportLevels(before,headline){
+  const after=snapshot();
+  const ups=[];
+  if(after.run>before.run) ups.push("Running → L"+after.run);
+  Object.keys(after.moves).forEach(k=>{ const b=before.moves[k]||1;
+    if(after.moves[k]>b) ups.push(k+" → L"+after.moves[k]); });
+  if(ups.length){ toast("LEVEL UP · "+ups.length, ups.join(" · ")); if(navigator.vibrate) navigator.vibrate([14,60,14]); }
+  else if(headline) toast(headline,"Hybrid Index "+after.hy.toFixed(2));
+  if(after.hy>before.hy+.0001 && ups.length) setTimeout(()=>toast("Hybrid Index "+after.hy.toFixed(2),"was "+before.hy.toFixed(2)),400);
+}
+function applyRun(miles,min,silent){
+  const before=silent?null:snapshot();
+  const b=Level.run(S.totals.miles).level;
+  S.totals.miles+=miles; S.totals.runs++; S.totals.minutes+=min;
+  const gained=Level.run(S.totals.miles).level-b;
+  S.runLog.push({miles,min,date:new Date().toISOString(),gained});
+  save();
+  if(!silent){ repaint(); reportLevels(before,fmt(miles,2)+" mi logged"); }
+}
+function applyLift(move,sets,silent,min){
+  const before=silent?null:snapshot();
+  const vol=sets.reduce((a,s)=>a+s.w*s.r,0);
+  const m=S.movements[move]||(S.movements[move]={volume:0,sets:0,best:null});
+  m.volume+=vol; m.sets+=sets.length;
+  const heaviest=sets.reduce((a,s)=>s.w>((a&&a.w)||0)?s:a,null);
+  if(heaviest && (!m.best || heaviest.w>m.best.w)) m.best={w:heaviest.w,r:heaviest.r};
+  S.totals.lifts++;
+  S.liftLog.push({move,sets,vol,min:min||0,date:new Date().toISOString()});
+  if(!LIBMAP[move]) LIBMAP[move]={name:move,group:"Other",bw:false};
+  save();
+  if(!silent){ repaint(); reportLevels(before,move+" logged"); }
+}
+function quickLog(){
+  sheet(`<h3>Log a session</h3>
+    <button class="gal" onclick="closeSheet();setTimeout(()=>logRunSheet(),240)">
+      <div style="flex:1"><b>Run</b><span>Distance and time — levels your cardio branch</span></div><span class="add">›</span></button>
+    <button class="gal" onclick="closeSheet();setTimeout(()=>logLiftSheet(),240)">
+      <div style="flex:1"><b>Lift</b><span>Sets of weight × reps — levels that movement</span></div><span class="add">›</span></button>
+    ${S.routines.length?`<button class="gal" onclick="closeSheet();setTimeout(()=>nav('train',null),240)">
+      <div style="flex:1"><b>Start a routine</b><span>${S.routines.length} saved</span></div><span class="add">›</span></button>`:""}
+    <button class="gal" onclick="closeSheet();setTimeout(()=>addFoodSheet(),240)">
+      <div style="flex:1"><b>Food</b><span>Calories, protein and macros</span></div><span class="add">›</span></button>`);
+}
+function logRunSheet(){
+  sheet(`<h3>Log a run</h3>
+    <div class="hstack" style="margin-bottom:14px">
+      <div><label class="lb">Miles</label><input class="fld" id="lrm" type="number" inputmode="decimal" placeholder="3.1"></div>
+      <div><label class="lb">Minutes</label><input class="fld" id="lrt" type="number" inputmode="decimal" placeholder="28"></div></div>
+    <button class="btn p" onclick="doRun()">Log run</button>`,
+    {after:s=>{ const i=s.querySelector("#lrm"); i&&i.focus(); }});
+}
+function doRun(){
+  const mi=+document.getElementById("lrm").value||0, min=+document.getElementById("lrt").value||0;
+  if(mi<=0){ toast("Enter a distance"); return; }
+  closeSheet(); applyRun(mi,min);
+}
+let liftDraft={move:null,sets:[{w:"",r:""}]};
+function logLiftSheet(pre){
+  const move=pre?decodeURIComponent(pre):liftDraft.move;
+  liftDraft={move,sets:[{w:move&&LIBMAP[move]&&LIBMAP[move].bw?S.profile.bodyweight:"",r:""}]};
+  drawLiftSheet();
+}
+function drawLiftSheet(){
+  const m=liftDraft.move;
+  sheet(`<h3>Log a lift</h3>
+    <button class="btn g sm" style="margin-bottom:14px;text-align:left;padding-left:14px" onclick="pickMove(pickForLift)">
+      ${m?esc(m):"Choose a movement"} ›</button>
+    ${m?`<div class="setrow"><span class="n">#</span><span class="tiny" style="text-align:center">LB</span>
+      <span class="tiny" style="text-align:center">REPS</span><span></span></div>
+    ${liftDraft.sets.map((s,i)=>`<div class="setrow"><span class="n">${i+1}</span>
+      <input type="number" inputmode="decimal" value="${s.w}" oninput="liftDraft.sets[${i}].w=this.value" placeholder="0">
+      <input type="number" inputmode="numeric" value="${s.r}" oninput="liftDraft.sets[${i}].r=this.value" placeholder="0">
+      <button class="chk" onclick="liftDraft.sets.splice(${i},1);drawLiftSheet()" style="color:#e5484d">×</button></div>`).join("")}
+    <button class="btn ghost sm" style="margin:4px 0 14px" onclick="liftDraft.sets.push({w:liftDraft.sets.length?liftDraft.sets[liftDraft.sets.length-1].w:'',r:''});drawLiftSheet()">+ Add set</button>
+    <button class="btn b" onclick="doLift()">Log ${esc(m)}</button>`:`<div class="empty">Pick a movement to start.</div>`}`);
+}
+function pickForLift(m){
+  liftDraft.move=m;
+  liftDraft.sets=[{w:LIBMAP[m]&&LIBMAP[m].bw?S.profile.bodyweight:"",r:""}];
+  drawLiftSheet();
+}
+function doLift(){
+  const sets=liftDraft.sets.map(s=>({w:+s.w||0,r:+s.r||0})).filter(s=>s.w>0&&s.r>0);
+  if(!sets.length){ toast("Add at least one set","Weight and reps are both needed."); return; }
+  const move=liftDraft.move; closeSheet(); applyLift(move,sets);
+}
+
+/* ---------------- MOVEMENT PICKER / LIBRARY ---------------- */
+let pickCb=null, pickQ="", pickG="All";
+function pickMove(cb){ pickCb=cb; pickQ=""; pickG="All"; drawPicker(); }
+function browseLibrary(){ pickMove(m=>{ closeSheet(); nav("movement",enc(m)); }); }
+function pickListHTML(){
+  const q=pickQ.trim().toLowerCase();
+  const list=allMoves().filter(m=>(pickG==="All"||m.group===pickG)&&m.name.toLowerCase().includes(q));
+  if(!list.length) return `<div class="empty">No movements match “${esc(pickQ)}”.<br>Use “Create your own” above.</div>`;
+  return list.map(m=>{
+    const v=(S.movements[m.name]||{}).volume||0, custom=!LIBMAP[m.name]||!LIB.includes(LIBMAP[m.name]);
+    const sub=(m.sub&&m.sub.length)?" · "+m.sub.slice(0,2).join(", "):"";
+    return `<button class="mvitem" data-pick="${esc(m.name)}">
+      <div style="flex:1;min-width:0"><b style="font-size:14.5px">${esc(m.name)}</b>
+      <div class="tiny">${m.group}${m.bw?" · bodyweight":""}${sub}${custom?" · custom":""}</div></div>
+      ${v?`<span class="lvpill s">L${Level.str(v).level}</span>`:`<span class="tiny">—</span>`}</button>`;}).join("");
+}
+function drawPicker(){
+  sheet(`<h3>Movements</h3>
+    <div class="srch"><input class="fld" id="pq" placeholder="Search ${allMoves().length} movements…" value="${esc(pickQ)}">
+      <div id="pchips" style="margin-top:10px;white-space:nowrap;overflow-x:auto">
+        ${["All"].concat(GROUPS).map(g=>`<button class="chip" data-g="${g}" style="${g===pickG?"background:var(--str);color:#fff":""}">${g}</button>`).join("")}
+      </div></div>
+    <button class="btn ghost sm" style="margin-bottom:10px" onclick="createMoveSheet()">+ Create your own movement</button>
+    <div id="plist">${pickListHTML()}</div>
+    <div style="height:8px"></div>`,
+    {after:s=>{
+      const plist=s.querySelector("#plist"), chips=s.querySelector("#pchips"), i=s.querySelector("#pq");
+      plist.addEventListener("click",ev=>{
+        const b=ev.target.closest("[data-pick]");
+        if(b && pickCb) pickCb(b.dataset.pick);
+      });
+      chips.addEventListener("click",ev=>{
+        const b=ev.target.closest("[data-g]"); if(!b) return;
+        pickG=b.dataset.g;
+        [...chips.children].forEach(c=>c.style.cssText = c.dataset.g===pickG?"background:var(--str);color:#fff":"");
+        plist.innerHTML=pickListHTML();
+      });
+      i.addEventListener("input",()=>{ pickQ=i.value; plist.innerHTML=pickListHTML(); });
+    }});
+}
+
+/* ---------------- CUSTOM MOVEMENT BUILDER ---------------- */
+let customDraft={name:"",group:"Chest",sub:[],bw:false};
+function createMoveSheet(){
+  customDraft={name:"",group:"Chest",sub:[],bw:false};
+  drawCreateMove();
+}
+function drawCreateMove(){
+  const d=customDraft;
+  sheet(`<h3>Create a movement</h3>
+    <label class="lb">Name</label>
+    <input class="fld" id="cmn" value="${esc(d.name)}" placeholder="e.g. Landmine Twist" maxlength="40"
+      oninput="customDraft.name=this.value" style="margin-bottom:14px">
+    <label class="lb">Primary muscle group</label>
+    <div id="cmg" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      ${GROUPS.map(g=>`<button class="chip" data-cg="${g}" style="${g===d.group?`background:${GCOLOR[g]};color:#fff;border-color:${GCOLOR[g]}`:""}">${g}</button>`).join("")}
+    </div>
+    <label class="lb">Also works — sub-muscles (optional)</label>
+    <div id="cms" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      ${MUSCLES.map(mu=>`<button class="chip" data-cs="${mu}" style="${d.sub.includes(mu)?"background:var(--str);color:#fff;border-color:var(--str)":""}">${mu}</button>`).join("")}
+    </div>
+    <button class="opt ${d.bw?"sel":""}" onclick="customDraft.bw=!customDraft.bw;drawCreateMove()">
+      <b>${d.bw?"✓ ":""}Bodyweight movement</b><span>Pre-fills your bodyweight when logging</span></button>
+    <button class="btn b" style="margin-top:4px" onclick="saveCustomMove()">Create movement</button>`,
+    {after:s=>{
+      const groups=s.querySelector("#cmg"), subs=s.querySelector("#cms");
+      groups.addEventListener("click",ev=>{ const b=ev.target.closest("[data-cg]"); if(!b) return;
+        customDraft.group=b.dataset.cg;
+        [...groups.children].forEach(c=>c.style.cssText = c.dataset.cg===customDraft.group?`background:${GCOLOR[customDraft.group]};color:#fff;border-color:${GCOLOR[customDraft.group]}`:""); });
+      subs.addEventListener("click",ev=>{ const b=ev.target.closest("[data-cs]"); if(!b) return;
+        const mu=b.dataset.cs, i=customDraft.sub.indexOf(mu);
+        if(i>=0) customDraft.sub.splice(i,1); else customDraft.sub.push(mu);
+        b.style.cssText = i<0?"background:var(--str);color:#fff;border-color:var(--str)":""; });
+    }});
+}
+function saveCustomMove(){
+  const name=(customDraft.name||"").trim();
+  if(!name){ toast("Name it first","Give your movement a name."); return; }
+  if(LIBMAP[name]){ toast("Already exists",`“${name}” is already a movement.`); return; }
+  const mv={name,group:customDraft.group,sub:customDraft.sub.slice(),bw:!!customDraft.bw};
+  S.customMoves.push(mv);
+  LIBMAP[name]=mv;
+  save();
+  toast("Created "+name, customDraft.group+(mv.sub.length?" · "+mv.sub.join(", "):""));
+  // Flow straight into whatever asked for a movement (logging a lift, a routine…).
+  if(pickCb) pickCb(name); else closeSheet();
+}
+
+/* ============================================================
+   RECIPES / MEALS — build a recipe, price its macros from USDA,
+   log it by the portion. State in S.recipes.
+   ============================================================ */
+const gv=id=>{ const e=document.getElementById(id); return e?e.value:""; };
+const setv=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v; };
+
+/* ---- USDA FoodData Central ---- */
+function saveUsdaKey(){
+  S.profile.usdaKey=(gv("susda")||"").trim(); save(); repaint();
+  toast(S.profile.usdaKey?"Key saved":"Key cleared", S.profile.usdaKey?"Recipe lookups are on.":"");
+}
+async function usdaSearch(query){
+  const key=(S.profile.usdaKey||"").trim();
+  if(!key) throw new Error("no API key");
+  const url="https://api.nal.usda.gov/fdc/v1/foods/search?api_key="+encodeURIComponent(key)
+    +"&pageSize=1&query="+encodeURIComponent(query);
+  const r=await fetch(url);
+  if(!r.ok) throw new Error("USDA "+r.status+(r.status===403||r.status===401?" (bad key)":""));
+  const d=await r.json();
+  return (d.foods&&d.foods[0])||null;
+}
+/* USDA search returns nutrients per 100 g. Numbers: 208 kcal, 203 protein,
+   204 fat, 205 carbs (957/958 are alternate energy fields). */
+function usdaMacrosPer100(food){
+  if(!food) return null;
+  const by={};
+  (food.foodNutrients||[]).forEach(n=>{ const num=String(n.nutrientNumber!=null?n.nutrientNumber:(n.number!=null?n.number:"")); if(num) by[num]=n.value; });
+  const kcal = by["208"]!=null?by["208"] : by["957"]!=null?by["957"] : by["958"]!=null?by["958"] : 0;
+  return {kcal:+kcal||0, p:+by["203"]||0, f:+by["204"]||0, c:+by["205"]||0};
+}
+async function usdaTest(){
+  toast("Testing…","Contacting USDA.");
+  try{
+    const f=await usdaSearch("chicken breast");
+    if(f){ const per=usdaMacrosPer100(f); toast("Connected ✓",(f.description||"chicken")+" · "+Math.round(per.kcal)+" kcal/100g"); }
+    else toast("Connected — no result");
+  }catch(e){ toast("Connection failed",String(e.message||e)+". Check the key."); }
+}
+
+/* ---- ingredient parsing ---- */
+const UNIT_ALIAS={g:"g",gram:"g",grams:"g",gr:"g",kg:"kg",kilogram:"kg",kilograms:"kg",mg:"mg",
+  oz:"oz",ounce:"oz",ounces:"oz",lb:"lb",lbs:"lb",pound:"lb",pounds:"lb",
+  cup:"cup",cups:"cup",tbsp:"tbsp",tablespoon:"tbsp",tablespoons:"tbsp",tbs:"tbsp",tb:"tbsp",
+  tsp:"tsp",teaspoon:"tsp",teaspoons:"tsp",ml:"ml",milliliter:"ml",milliliters:"ml",l:"l",liter:"l",liters:"l",litre:"l",
+  jar:"jar",jars:"jar",can:"can",cans:"can",box:"box",boxes:"box",pack:"pack",packs:"pack",package:"pack",packages:"pack",
+  bag:"bag",bags:"bag",slice:"slice",slices:"slice",clove:"clove",cloves:"clove",stick:"stick",sticks:"stick",
+  piece:"piece",pieces:"piece",pinch:"pinch",quart:"quart",qt:"quart",pint:"pint",pt:"pint",
+  fillet:"piece",fillets:"piece",breast:"piece",breasts:"piece"};
+const UNIT_GRAMS={g:1,kg:1000,mg:0.001,oz:28.35,lb:453.6,cup:240,tbsp:15,tsp:5,ml:1,l:1000,
+  jar:680,can:400,box:454,pack:454,bag:454,slice:25,clove:3,stick:113,piece:120,pinch:0.5,quart:946,pint:473};
+const UFRAC={"½":"1/2","¼":"1/4","¾":"3/4","⅓":"1/3","⅔":"2/3","⅛":"1/8","⅜":"3/8","⅝":"5/8","⅞":"7/8","⅕":"1/5","⅖":"2/5","⅗":"3/5","⅘":"4/5"};
+function frac(s){ const m=String(s).split("/"); return m.length===2?(+m[0]||0)/(+m[1]||1):(+s||0); }
+function evalQty(s){ s=String(s).trim();
+  if(/\s/.test(s)){ const parts=s.split(/\s+/); return (+parts[0]||0)+frac(parts[1]); }
+  if(s.indexOf("/")>0) return frac(s);
+  return +s||0; }
+function toGrams(qty,unit){ return Math.round(qty*((unit&&UNIT_GRAMS[unit]!=null)?UNIT_GRAMS[unit]:100)); }
+function parseIngredientLine(raw){
+  if(raw==null) return null;
+  let s=String(raw).trim().replace(/^[\-\*•▪●]\s*/,"");
+  if(!s) return null;
+  s=s.replace(/(\d)\s*([½¼¾⅓⅔⅛⅜⅝⅞⅕⅖⅗⅘])/g,"$1 $2").replace(/[½¼¾⅓⅔⅛⅜⅝⅞⅕⅖⅗⅘]/g,ch=>UFRAC[ch]||"").replace(/\s+/g," ").trim();
+  const m=s.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)\s*(.*)$/);
+  let qty=1, rest=s;
+  if(m){ qty=evalQty(m[1]); rest=m[2]; }
+  let unit="", name=rest;
+  const um=rest.match(/^([A-Za-z]+)\.?(?:\s+(.*))?$/);
+  if(um && UNIT_ALIAS[um[1].toLowerCase()]){ unit=UNIT_ALIAS[um[1].toLowerCase()]; name=um[2]||""; }
+  name=name.replace(/^of\s+/i,"").replace(/\([^)]*\)/g,"").replace(/,.*$/,"").trim();
+  if(!name) name=rest.trim();
+  return {raw:String(raw).trim(), name, grams:toGrams(qty,unit), kcal:0, p:0, f:0, c:0};
+}
+
+/* ---- URL import (best effort — most sites block cross-origin reads) ---- */
+async function fetchRecipeFromUrl(url){
+  const res=await fetch(url);
+  const html=await res.text();
+  const doc=new DOMParser().parseFromString(html,"text/html");
+  let recipe=null;
+  doc.querySelectorAll('script[type="application/ld+json"]').forEach(sc=>{
+    if(recipe) return;
+    try{
+      const data=JSON.parse(sc.textContent);
+      const nodes=[];
+      const push=o=>{ if(o&&typeof o==="object") nodes.push(o); };
+      if(Array.isArray(data)) data.forEach(push); else { push(data); if(data&&Array.isArray(data["@graph"])) data["@graph"].forEach(push); }
+      nodes.forEach(o=>{ if(recipe) return; const t=o["@type"];
+        if(t==="Recipe"||(Array.isArray(t)&&t.indexOf("Recipe")>=0)) recipe=o; });
+    }catch(e){}
+  });
+  if(!recipe) return null;
+  const ing=(recipe.recipeIngredient||recipe.ingredients||[]).map(x=>String(x));
+  let y=recipe.recipeYield; if(Array.isArray(y)) y=y[0];
+  const ym=String(y||"").match(/\d+/);
+  return {name:typeof recipe.name==="string"?recipe.name:"", yield:ym?+ym[0]:null, ingredients:ing};
+}
+async function importFromUrl(){
+  const url=(gv("rcu")||"").trim();
+  if(!url){ toast("Paste a URL first"); return; }
+  toast("Fetching…","Reading the recipe page.");
+  try{
+    const rec=await fetchRecipeFromUrl(url);
+    if(!rec){ toast("No recipe found","No structured recipe on that page. Paste the ingredients instead."); return; }
+    if(rec.name) setv("rcn",rec.name);
+    if(rec.yield) setv("rcs",rec.yield);
+    if(rec.ingredients.length) setv("rci",rec.ingredients.join("\n"));
+    toast("Imported ✓","Check the ingredients, then Create.");
+  }catch(e){ toast("Couldn't load that URL","The site blocked the request. Copy the ingredient list and paste it instead."); }
+}
+
+/* ---- recipe CRUD + math ---- */
+function getRecipe(id){ return (S.recipes||[]).find(r=>r.id===id); }
+function recipeTotals(r){ return (r.ingredients||[]).reduce((a,i)=>({
+  kcal:a.kcal+(+i.kcal||0), p:a.p+(+i.p||0), f:a.f+(+i.f||0), c:a.c+(+i.c||0)}),{kcal:0,p:0,f:0,c:0}); }
+function recipePerServing(r){ const t=recipeTotals(r), s=Math.max(1,+r.servings||1);
+  return {kcal:t.kcal/s, p:t.p/s, f:t.f/s, c:t.c/s}; }
+function newRecipeSheet(){
+  sheet(`<h3>New meal</h3>
+    <label class="lb">Name</label>
+    <input class="fld" id="rcn" placeholder="Pasta with meat sauce" style="margin-bottom:12px">
+    <label class="lb">Servings the whole recipe makes</label>
+    <input class="fld" id="rcs" type="number" inputmode="numeric" value="4" style="margin-bottom:14px">
+    <label class="lb">Paste the ingredients — one per line</label>
+    <textarea class="fld" id="rci" placeholder="1 lb ground beef\n1 jar tomato sauce\n1 box pasta" style="min-height:120px;resize:vertical;margin-bottom:6px"></textarea>
+    <div class="tiny" style="margin:0 0 12px 2px">Copy the ingredient list from any recipe and drop it in.</div>
+    <div class="hstack" style="margin-bottom:14px;gap:8px">
+      <input class="fld" id="rcu" placeholder="…or paste a recipe URL">
+      <button class="btn g sm" style="flex:0 0 auto;width:auto;padding:0 18px" onclick="importFromUrl()">Import</button></div>
+    <button class="btn p" onclick="createRecipe()">Create recipe</button>`,
+    {after:s=>{ const i=s.querySelector("#rcn"); i&&i.focus(); }});
+}
+function createRecipe(){
+  const name=(gv("rcn")||"").trim()||"Untitled meal";
+  const servings=Math.max(1,+gv("rcs")||1);
+  const lines=(gv("rci")||"").split(/\n+/).map(parseIngredientLine).filter(Boolean);
+  const r={id:"r"+Date.now().toString(36),name,servings,ingredients:lines};
+  S.recipes.unshift(r); save(); closeSheet(); nav("recipe",r.id);
+  if(S.profile.usdaKey && lines.length) setTimeout(()=>lookupAll(r.id),300);
+}
+function bumpServings(id,d){ const r=getRecipe(id); if(!r) return; r.servings=Math.max(1,(+r.servings||1)+d); save(); repaint(); }
+function delIngredient(id,i){ const r=getRecipe(id); if(!r) return; r.ingredients.splice(i,1); save(); repaint(); }
+function delRecipe(id){
+  const r=getRecipe(id);
+  sheet(`<h3>Delete this recipe?</h3><p class="muted" style="margin:0 0 16px">“${esc((r||{}).name||"")}” will be removed. Days you already logged it stay logged.</p>
+    <button class="btn sm" style="background:#e5484d;color:#fff;margin-bottom:9px" onclick="doDelRecipe('${id}')">Delete</button>
+    <button class="btn g sm" onclick="closeSheet()">Cancel</button>`);
+}
+function doDelRecipe(id){ S.recipes=(S.recipes||[]).filter(r=>r.id!==id); save(); closeSheet(); nav("fuel",null); }
+
+/* ---- USDA lookups for ingredients ---- */
+async function lookupAll(id){
+  if(!S.profile.usdaKey){ toast("Add a USDA key first","Settings → Recipe Lookups."); return; }
+  const r=getRecipe(id); if(!r) return;
+  toast("Looking up…",r.ingredients.length+" ingredients");
+  let done=0, fail=0;
+  for(let i=0;i<r.ingredients.length;i++){
+    const ing=r.ingredients[i];
+    if(!ing.name || ing.kcal>0) continue;
+    try{
+      const food=await usdaSearch(ing.name);
+      if(food){ const per=usdaMacrosPer100(food), g=ing.grams||0;
+        ing.kcal=Math.round(per.kcal*g/100); ing.p=+(per.p*g/100).toFixed(1);
+        ing.c=+(per.c*g/100).toFixed(1); ing.f=+(per.f*g/100).toFixed(1);
+        ing.matched=food.description||""; done++; }
+      else fail++;
+    }catch(e){ fail++; if(String(e.message||e).indexOf("key")>=0){ toast("Lookup stopped",String(e.message||e)); break; } }
+    save(); repaint();
+  }
+  toast("Lookup done",done+" matched"+(fail?", "+fail+" need a manual number":""));
+}
+async function lookupFromSheet(id,i){
+  const name=(gv("ein")||"").trim(), g=+gv("eig")||0;
+  if(!name){ toast("Enter a name first"); return; }
+  if(!g){ toast("Enter grams first","Macros scale with the amount."); return; }
+  toast("Looking up…",name);
+  try{
+    const food=await usdaSearch(name);
+    if(!food){ toast("No match","Nothing for “"+name+"”. Enter macros by hand."); return; }
+    const per=usdaMacrosPer100(food);
+    setv("eik",Math.round(per.kcal*g/100)); setv("eip",+(per.p*g/100).toFixed(1));
+    setv("eic",+(per.c*g/100).toFixed(1)); setv("eif",+(per.f*g/100).toFixed(1));
+    toast("Filled from USDA",food.description||name);
+  }catch(e){ toast("Lookup failed",String(e.message||e)); }
+}
+function addIngredientSheet(id){ const r=getRecipe(id); if(!r) return;
+  r.ingredients.push({raw:"",name:"",grams:0,kcal:0,p:0,f:0,c:0}); save();
+  editIngredientSheet(id,r.ingredients.length-1); }
+function editIngredientSheet(id,i){
+  const r=getRecipe(id); if(!r) return; const ing=r.ingredients[i]; if(!ing) return;
+  const key=!!S.profile.usdaKey;
+  sheet(`<h3>Ingredient</h3>
+    <label class="lb">Name — used for the USDA lookup</label>
+    <input class="fld" id="ein" value="${esc(ing.name||ing.raw||"")}" placeholder="ground beef" style="margin-bottom:12px">
+    <label class="lb">Amount (grams)</label>
+    <input class="fld" id="eig" type="number" inputmode="decimal" value="${ing.grams||""}" placeholder="454" style="margin-bottom:12px">
+    ${key?`<button class="btn g sm" style="margin-bottom:14px" onclick="lookupFromSheet('${id}',${i})">↻ Look up macros in USDA</button>`:""}
+    <div class="hstack" style="margin-bottom:12px">
+      <div><label class="lb">Calories</label><input class="fld" id="eik" type="number" inputmode="numeric" value="${ing.kcal||""}"></div>
+      <div><label class="lb">Protein (g)</label><input class="fld" id="eip" type="number" inputmode="decimal" value="${ing.p||""}"></div></div>
+    <div class="hstack" style="margin-bottom:14px">
+      <div><label class="lb">Carbs (g)</label><input class="fld" id="eic" type="number" inputmode="decimal" value="${ing.c||""}"></div>
+      <div><label class="lb">Fat (g)</label><input class="fld" id="eif" type="number" inputmode="decimal" value="${ing.f||""}"></div></div>
+    <div class="tiny" style="margin:-6px 0 14px 2px">These are the macros for this amount of the ingredient.</div>
+    <button class="btn p" onclick="saveIngredient('${id}',${i})">Save ingredient</button>`,
+    {after:s=>{ const el=s.querySelector("#ein"); el&&el.focus(); }});
+}
+function saveIngredient(id,i){
+  const r=getRecipe(id); if(!r) return; const ing=r.ingredients[i]; if(!ing) return;
+  ing.name=(gv("ein")||ing.name).trim(); if(!ing.raw) ing.raw=ing.name;
+  ing.grams=+gv("eig")||0;
+  ing.kcal=+gv("eik")||0; ing.p=+gv("eip")||0; ing.c=+gv("eic")||0; ing.f=+gv("eif")||0;
+  save(); closeSheet(); repaint();
+}
+
+/* ---- logging a portion into today's food ---- */
+function logRecipeSheet(id){
+  const r=getRecipe(id); if(!r) return; const ps=recipePerServing(r);
+  sheet(`<h3>Log ${esc(r.name)}</h3>
+    <p class="muted" style="margin:0 0 14px;line-height:1.5">One serving ≈ <b style="color:var(--txt)">${Math.round(ps.kcal)} kcal · ${Math.round(ps.p)}g protein</b>.</p>
+    <label class="lb">How many servings did you eat?</label>
+    <input class="fld" id="rlp" type="number" inputmode="decimal" step="0.25" value="1" style="margin-bottom:14px">
+    <button class="btn p" onclick="applyRecipePortion('${id}')">Add to today</button>`,
+    {after:s=>{ const i=s.querySelector("#rlp"); if(i){ i.focus(); i.select&&i.select(); } }});
+}
+function applyRecipePortion(id){
+  const r=getRecipe(id); if(!r) return;
+  const n=+gv("rlp")||0; if(n<=0){ toast("Enter servings"); return; }
+  const ps=recipePerServing(r);
+  const kcal=Math.round(ps.kcal*n), p=+(ps.p*n).toFixed(1), c=+(ps.c*n).toFixed(1), f=+(ps.f*n).toFixed(1);
+  const k=todayKey(), m=S.macros[k]=S.macros[k]||{p:0,f:0,c:0,items:[]};
+  if(m.kcal==null) m.kcal=(m.p||0)*4+(m.c||0)*4+(m.f||0)*9;
+  m.items.push({name:r.name+" · "+fmt(n,2)+" serving"+(n===1?"":"s"),p,f,c,kcal});
+  m.p+=p; m.f+=f; m.c+=c; m.kcal+=kcal;
+  save(); closeSheet(); nav("fuel",null);
+  toast("Logged "+r.name,kcal+" kcal · "+p+"g protein");
+}
+
+/* ---- Fuel-tab card + pages ---- */
+function recipesCard(){
+  const rs=S.recipes||[];
+  return `<div class="card"><div class="ctitle">Meals &amp; Recipes${rs.length?` <span style="color:var(--dim2)">${rs.length}</span>`:""}</div>
+    ${rs.length?rs.slice(0,4).map(r=>{ const ps=recipePerServing(r);
+      return `<div class="lrow">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="nav('recipe','${r.id}')">
+          <b style="font-size:14.5px">${esc(r.name)}</b>
+          <div class="tiny">${r.servings} serving${r.servings===1?"":"s"} · ${Math.round(ps.kcal)} kcal · ${Math.round(ps.p)}g P each</div></div>
+        <button class="lvpill s" style="padding:7px 13px" onclick="event.stopPropagation();logRecipeSheet('${r.id}')">Log</button></div>`;}).join("")
+      :`<div class="empty">No saved meals yet.<br>Build a recipe once, then log it by the portion.</div>`}
+    ${rs.length>4?`<button class="btn ghost sm" style="margin-top:8px" onclick="nav('recipes',null)">See all ${rs.length}</button>`:""}
+    <button class="btn g sm" style="margin-top:10px" onclick="newRecipeSheet()">+ New meal / recipe</button>
+  </div>`;
+}
+PAGES.recipes=function(){
+  const rs=S.recipes||[];
+  return head("Meals","Saved recipes","fuel")
+  + (rs.length?rs.map(r=>{ const ps=recipePerServing(r);
+      return `<div class="card tap" style="cursor:pointer" onclick="nav('recipe','${r.id}')"><div class="row">
+        <div style="flex:1;min-width:0"><b>${esc(r.name)}</b>
+          <div class="tiny" style="margin-top:4px">${r.servings} servings · ${Math.round(ps.kcal)} kcal · ${Math.round(ps.p)}g P per serving</div></div>
+        <button class="lvpill s" style="padding:8px 13px" onclick="event.stopPropagation();logRecipeSheet('${r.id}')">Log</button></div></div>`;}).join("")
+     :`<div class="card"><div class="empty">No saved meals yet.</div></div>`)
+  + `<button class="btn g" style="margin-bottom:20px" onclick="newRecipeSheet()">+ New meal / recipe</button>`;
+};
+PAGES.recipe=function(id){
+  const r=getRecipe(id);
+  if(!r) return head("Recipe",null,"fuel")+`<div class="card"><div class="empty">This recipe no longer exists.</div></div>`;
+  const t=recipeTotals(r), ps=recipePerServing(r), key=!!S.profile.usdaKey;
+  const missing=r.ingredients.filter(i=>!i.kcal).length;
+  return head(r.name,r.servings+" serving"+(r.servings===1?"":"s"),"fuel")
+  + `<div class="grid2">
+      <div class="card" style="margin:0;text-align:center"><div class="ctitle" style="justify-content:center">Per serving</div>
+        <div class="big" style="color:var(--run)">${Math.round(ps.kcal)}</div>
+        <div class="muted" style="margin-top:4px">kcal</div>
+        <div class="tiny" style="margin-top:8px">P ${Math.round(ps.p)}g · C ${Math.round(ps.c)}g · F ${Math.round(ps.f)}g</div></div>
+      <div class="card" style="margin:0;text-align:center"><div class="ctitle" style="justify-content:center">Whole recipe</div>
+        <div class="big">${Math.round(t.kcal)}</div>
+        <div class="muted" style="margin-top:4px">kcal total</div>
+        <div class="tiny" style="margin-top:8px">P ${Math.round(t.p)}g · C ${Math.round(t.c)}g · F ${Math.round(t.f)}g</div></div>
+    </div>
+    <div class="card"><div class="ctitle">Servings this recipe makes</div>
+      <div class="row" style="justify-content:center;gap:22px">
+        <button class="btn g sm" style="width:56px" onclick="bumpServings('${id}',-1)">−</button>
+        <div style="font-size:26px;font-weight:800;min-width:34px;text-align:center">${r.servings}</div>
+        <button class="btn b sm" style="width:56px" onclick="bumpServings('${id}',1)">＋</button></div>
+    </div>
+    <div class="card"><div class="ctitle">Ingredients${key&&missing?` <button class="tiny" style="color:var(--str);font-weight:700" onclick="lookupAll('${id}')">Look up all ${missing}</button>`:""}</div>
+      ${r.ingredients.length?r.ingredients.map((ing,i)=>`<div class="lrow">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="editIngredientSheet('${id}',${i})">
+          <b style="font-size:14px">${esc(ing.raw||ing.name||"(unnamed)")}</b>
+          <div class="tiny">${Math.round(ing.grams)||"?"} g · ${ing.kcal?Math.round(ing.kcal)+" kcal · "+Math.round(ing.p)+"g P":`<span style="color:var(--warn)">tap to set macros</span>`}${ing.matched?` · <span style="color:var(--dim2)">${esc(ing.matched)}</span>`:""}</div></div>
+        <button class="tiny" style="color:#e5484d;font-weight:700;padding:0 4px" onclick="event.stopPropagation();delIngredient('${id}',${i})">✕</button></div>`).join("")
+        :`<div class="empty">No ingredients yet.</div>`}
+      <button class="btn ghost sm" style="margin-top:10px" onclick="addIngredientSheet('${id}')">+ Add ingredient</button>
+    </div>
+    ${!key?`<div class="card" style="border-color:#4a3a1a;background:#181509">
+      <div class="muted" style="font-size:13px;line-height:1.6;color:#ffdc9e">Add a free USDA API key in Settings to auto-fill macros. Until then, tap each ingredient to type them in.</div></div>`:""}
+    <button class="btn p" style="margin-bottom:10px" onclick="logRecipeSheet('${id}')">Log a portion I ate</button>
+    <button class="btn ghost sm" style="color:#e5484d;border-color:#4a2226;margin-bottom:20px" onclick="delRecipe('${id}')">Delete recipe</button>`;
+};
+
+/* ---------------- BOOT ---------------- */
+window.addEventListener("error",e=>console.warn("HYBRID error:",e.message));
+(function boot(){
+  if(!S.onboarded){ onbStep=0; onbData={trackFC:true}; paintOnb(); }
+  else { paint(); }
+  setTimeout(flushToasts,500);
+})();
+/* Register the service worker so the app installs and works offline.
+   Skipped on file:// (SW needs https or localhost) — kicks in once hosted. */
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW failed",e)); });
+}
+</script>
+</body>
+</html>
