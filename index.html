@@ -403,65 +403,63 @@ const Fuel = {
     return {kcal:run+lift, run, lift, min:runMin+liftMin, runMin, liftMin};
   },
 
+  /* Default goal offsets from resting, in kcal. The target itself is stored on
+     the profile (calTarget) so the user "sets it for themselves"; these are just
+     the starting points when they tap a goal. */
+  GOAL_OFFSET:{lose:-500, maintain:0, gain:300},
+
+  /* The target that sits under a goal, anchored to resting. Maintain is always
+     exactly resting; lose/gain default to an offset but the stored calTarget
+     (if the user edited it) wins. */
+  goalTarget(resting, goal, p){
+    p=p||S.profile; goal=goal||p.calGoal||"maintain";
+    if(goal==="maintain") return Math.round(resting);
+    if(+p.calTarget>0) return Math.round(+p.calTarget);
+    return Math.round(resting + (this.GOAL_OFFSET[goal]||0));
+  },
+
   compute(opts){
     opts=opts||{};
     const p=S.profile, kg=this.kg(), b=this.bmr();
-    const model=opts.model||p.calModel||"training_load";
+    const resting=b.v;
 
-    let tdee, exercise, estimated, burn, source;
-    if(model==="multiplier"){
-      burn=this.burn(b.v); source="activity";
-      tdee=b.v*(this.ACT[p.activity]||this.ACT.moderate);
-      exercise=Math.max(0,tdee-b.v*1.2);   // everything above sedentary
-      estimated=true;
-    }else{
-      const basis=this.basis(b.v);
-      burn=basis.burn; source=basis.source; exercise=basis.kcal;
-      tdee=b.v*(this.NEAT[p.neat]||this.NEAT.desk)+exercise;
-      estimated = source!=="today";
-    }
+    // Active / working calories: non-exercise living (your job/steps, via NEAT)
+    // plus whatever today's logged training actually cost. Shown on its own —
+    // in this model it is NOT folded into the target.
+    const neat=Math.max(0, resting*((this.NEAT[p.neat]||this.NEAT.desk)-1));
+    const basis=this.basis(resting);
+    const training=basis.kcal;
+    const active=neat+training;
+    const tdee=resting+active;               // full daily burn, for reference
 
-    // Breastfeeding adds real energy demand on top of living + training.
-    const bfBurn=this.breastfeedingBurn();
-    tdee+=bfBurn;
-
+    const bfBurn=this.breastfeedingBurn();    // milk production rides on top of the target
     const goal=opts.goal||p.calGoal||"maintain";
-    const cap=goal==="lose"?1:.5;
-    const rate=goal==="maintain"?0:Math.min(Math.abs(+p.calRate||(goal==="lose"?.75:.25)),cap);
-    const daily=(rate/100)*kg*this.KCAL_PER_KG/7;
-    let target=tdee+(goal==="lose"?-daily:goal==="gain"?daily:0);
+    const base=this.goalTarget(resting, goal, p);   // anchored to resting
+    let target=base+bfBurn;
 
     const flags=[];
     const floor=this.FLOOR[p.sex]||1500;
-    if(target<floor){
-      flags.push({s:"warn",t:`Raised to the ${floor} kcal floor. Weight will come off slower than you asked for.`});
-      target=floor;
-    }
-    if(target<b.v) flags.push({s:"warn",t:"This is under your resting metabolism. Short blocks only."});
+    if(target<floor){ flags.push({s:"warn",t:`Raised to the ${floor} kcal floor — the lowest we'll ever suggest.`}); target=floor; }
 
-    // Protein first, then a sex-specific fat floor, then carbs take the rest —
-    // carbs are the fuel that should flex with mileage.
+    // Protein first, then a sex-specific fat floor, then carbs take the rest.
     const protein = b.lbm!=null ? b.lbm*(goal==="lose"?2.8:2.3) : kg*(goal==="lose"?2.2:1.8);
     const fat = Math.max((this.FATFLOOR[p.sex]||.8)*kg, target*.25/9);
     const carbs = Math.max(0,(target-protein*4-fat*9)/4);
-    if(carbs<=0) flags.push({s:"bad",t:"Protein and fat eat the whole budget. Nothing left to fuel running — ease the deficit."});
+    if(carbs<=0) flags.push({s:"bad",t:"Protein and fat use up the whole target — raise it or ease the deficit."});
 
-    if(b.lbm!=null){
-      const ea=(target-exercise)/b.lbm, min=this.EAMIN[p.sex]||25;
-      if(ea<min) flags.push({s:estimated?"warn":"bad",
-        t:`Energy availability ${Math.round(ea)} kcal/kg lean mass, under the ${min} line linked to RED-S — hormones, bone density, stalled adaptation.`+
-          (estimated?" Estimated from your activity level, not logged sessions.":"")});
-      else if(ea<45) flags.push({s:"warn",t:`Energy availability ${Math.round(ea)}. Fine for a deliberate cut, not somewhere to live.`});
+    // Energy availability vs. everything you burn being active. Eating at resting
+    // while training hard is a genuine deficit, so this can fire — by design.
+    if(b.lbm!=null && active>0){
+      const ea=(target-active)/b.lbm, min=this.EAMIN[p.sex]||25;
+      if(ea<min) flags.push({s:"warn",
+        t:`Energy availability ~${Math.round(ea)} kcal/kg lean mass, under the ${min} line linked to RED-S. Eating around resting on a hard training day is a deep deficit — good for a short block, not somewhere to live.`});
     }
 
-    const weekKm=this.weekKm();
-    const carbNeed = weekKm>=80?9 : weekKm>=50?7 : weekKm>=20?5 : 3;
-    if(carbs>0 && weekKm>=20 && carbs/kg < carbNeed*.75)
-      flags.push({s:"warn",t:`${(carbs/kg).toFixed(1)} g/kg of carbs is light for ${Math.round(weekKm/1.609344)} mi a week. Expect heavy legs on long runs.`});
-
-    return {bmr:Math.round(b.v), formula:b.f, lbm:b.lbm, bfBurn:Math.round(bfBurn),
-            tdee:Math.round(tdee), target:Math.round(target), adj:Math.round(target-tdee),
-            exercise:Math.round(exercise), estimated, burn, source, model, goal, rate,
+    return {bmr:Math.round(resting), formula:b.f, lbm:b.lbm, bfBurn:Math.round(bfBurn),
+            resting:Math.round(resting), neat:Math.round(neat), training:Math.round(training),
+            active:Math.round(active), tdee:Math.round(tdee),
+            target:Math.round(target), base:Math.round(base), goal,
+            exercise:Math.round(active), estimated:basis.source!=="today", burn:basis.burn, source:basis.source, model:"resting",
             protein:Math.round(protein), fat:Math.round(fat), carbs:Math.round(carbs),
             fiber:Math.round(target/1000*14), flags};
   },
@@ -508,7 +506,7 @@ const blank=()=>({
     // fuel engine inputs — see the Fuel object above
     sex:"", heightIn:0, age:0, ageYear:0, bodyFat:0,
     activity:"moderate", neat:"desk", calModel:"training_load",
-    calGoal:"maintain", calRate:.75, proteinManual:false,
+    calGoal:"maintain", calRate:.75, calTarget:0, proteinManual:false,  // calTarget: user-set daily calories (anchored to resting)
     bmrManual:false, bmrCustom:0,               // set-your-own resting calories
     breastfeeding:"", feedsPerDay:0,            // nursing/pumping calorie burn
     usdaKey:""},                                // USDA FoodData Central API key (recipe lookups)
@@ -516,6 +514,7 @@ const blank=()=>({
   movements:{},           // name -> {volume, sets, best:{w,r}}
   customMoves:[],         // user-built movements: {name,group,sub:[],bw}
   recipes:[],             // saved meals: {id,name,servings,ingredients:[{raw,grams,name,kcal,p,f,c}]}
+  weightLog:[],           // body-weight over time: [{date, w}] — first entry is the starting weight
   runLog:[], liftLog:[], macros:{}, routines:[], layout:DEFAULT_WIDGETS.slice(),
   active:null             // in-progress routine session
 });
@@ -555,6 +554,10 @@ function migrate(d){
   if(!Array.isArray(out.layout)||!out.layout.length) out.layout=DEFAULT_WIDGETS.slice();
   if(!Array.isArray(out.routines)) out.routines=[];
   if(!Array.isArray(out.recipes)) out.recipes=[];
+  if(!Array.isArray(out.weightLog)) out.weightLog=[];
+  // Existing users with a bodyweight but no history get a starting point today.
+  if(d.onboarded && !out.weightLog.length && out.profile.bodyweight>0)
+    out.weightLog=[{date:new Date().toISOString(), w:+out.profile.bodyweight}];
   // Anyone who onboarded before calories existed keeps a manual protein target
   // until they fill in the new fields. Nobody's saved numbers change under them.
   if(d.onboarded && !out.profile.sex) out.profile.proteinManual=true;
@@ -777,38 +780,39 @@ function renderOnboarding(){
       <button class="btn p" onclick="grabBody()">Continue</button>`);
   }
 
-  /* ---- computed targets, with the goal dial ---- */
+  /* ---- resting calories (their number, not the equation's) + goal ---- */
   if(onbStep===QS.length+1){
-    // Preview with the activity multiplier, not the training-load model: they
-    // have not logged a session yet, so a training-load number here would be a
-    // rest-day number and would read as absurdly low on day one.
-    const t=Fuel.ready()?Fuel.compute({model:"multiplier"}):null;
-    if(!t) return onbShell(`<h1 style="margin:0 0 8px;font-size:27px">Something's missing</h1>
+    if(!Fuel.ready()) return onbShell(`<h1 style="margin:0 0 8px;font-size:27px">Something's missing</h1>
       <p class="muted" style="margin:0 0 20px">Go back and check your height, weight and age.</p>
       <button class="btn g" onclick="onbStep--;paintOnb()">Back</button>`);
-    const goals=[["lose","Lose fat","Slow enough to keep your lifts"],
-                 ["maintain","Maintain","Fuel the training you're already doing"],
-                 ["gain","Build","A controlled surplus for strength work"]];
-    return onbShell(`<h1 style="margin:0 0 8px;font-size:27px;letter-spacing:-.7px">Here's your number</h1>
-      <p class="muted" style="margin:0 0 18px;line-height:1.5">Resting burn ${t.bmr.toLocaleString()} kcal by ${t.formula}, plus the way you live and train.</p>
-      <div class="card" style="text-align:center;padding:20px 16px">
+    const est=Fuel.bmrAuto();
+    const t=Fuel.compute();
+    const goal=S.profile.calGoal||"maintain";
+    const goals=[["lose","Deficit","Below resting — lose fat"],
+                 ["maintain","Maintain","Right at your resting calories"],
+                 ["gain","Bulk","Above resting — build"]];
+    return onbShell(`<h1 style="margin:0 0 8px;font-size:27px;letter-spacing:-.7px">Your resting calories</h1>
+      <p class="muted" style="margin:0 0 16px;line-height:1.5">This is what your body burns at rest — the number everything else is built on. We <b>estimated ${est.toLocaleString()}</b> from your height, weight and age, but if you've had it measured (a metabolic test or a wearable you trust), enter your own instead.</p>
+      <label class="lb">Resting calories a day</label>
+      <input class="fld" id="orest" type="number" inputmode="numeric" value="${(S.profile.bmrManual&&+S.profile.bmrCustom>0)?+S.profile.bmrCustom:est}" style="margin-bottom:6px">
+      <div class="tiny" style="margin:0 0 16px 2px;line-height:1.5">Tap a goal to lock it in — you can change all of this in Settings later.</div>
+      <label class="lb">Your goal</label>
+      ${goals.map(g=>`<button class="opt ${goal===g[0]?"sel":""}" onclick="onbGoal('${g[0]}')">
+        <b>${g[1]}</b><span>${g[2]}</span></button>`).join("")}
+      <div class="card" style="text-align:center;padding:20px 16px;margin-top:4px">
         <div class="big" style="color:var(--run)">${t.target.toLocaleString()}</div>
-        <div class="muted" style="margin-top:6px">calories a day</div>
+        <div class="muted" style="margin-top:6px">calories a day · ${goal==="lose"?"deficit":goal==="gain"?"bulk":"maintain"}</div>
         <div class="grid2" style="gap:10px;margin-top:16px">
           <div class="stat" style="background:#101722"><b style="color:var(--hyb)">${t.protein}g</b><span>Protein</span></div>
           <div class="stat" style="background:#101722"><b>${t.carbs}g</b><span>Carbs</span></div>
         </div>
         <div class="tiny" style="margin-top:10px">Fat ${t.fat}g · Fibre ${t.fiber}g</div>
       </div>
-      ${goals.map(g=>`<button class="opt ${S.profile.calGoal===g[0]?"sel":""}" onclick="onbGoal('${g[0]}')">
-        <b>${g[1]}</b><span>${g[2]}</span></button>`).join("")}
       <button class="opt ${onbData.trackFC?"sel":""}" style="margin-top:6px" onclick="onbData.trackFC=!onbData.trackFC;paintOnb()">
         <b>${onbData.trackFC?"✓ ":""}Show carbs &amp; fat on the Fuel tab</b><span>Calories and protein show either way</span></button>
-      <button class="btn p" style="margin-top:14px" onclick="onbStep++;paintOnb()">Looks right</button>
+      <button class="btn p" style="margin-top:14px" onclick="grabRest()">Looks right</button>
       <div class="tiny" style="margin-top:14px;line-height:1.55;text-align:center">
-        That's a typical ${Fuel.ACTNAME[S.profile.activity].toLowerCase()} day. Once you start logging, your daily
-        target rises and falls with the training you actually did.<br><br>
-        Every number here is an estimate to start from — two weeks of weight trend beats any equation. All of it is editable in Settings.</div>`);
+        Your active/working calories — your job plus the runs and lifts you log — show separately on the Fuel tab, so you always see your full daily burn on top of this.</div>`);
   }
 
   return onbShell(`<h1 style="margin:0 0 8px;font-size:27px;letter-spacing:-.7px">What should we call you?</h1>
@@ -820,10 +824,21 @@ function renderOnboarding(){
    targets step is computed by the same engine the app runs on. */
 function onbPick(k,v){ onbData[k]=v; S.profile[k]=v; onbStep++; paintOnb(); }
 function onbGoal(g){
-  S.profile.calGoal=g; onbData.calGoal=g;
-  S.profile.calRate = g==="lose"?.75 : g==="gain"?.25 : 0;
-  onbData.calRate=S.profile.calRate;
+  const r=+((document.getElementById("orest")||{}).value)||Fuel.bmrAuto();
+  S.profile.bmrManual=true; S.profile.bmrCustom=r;
+  S.profile.calGoal=g;
+  S.profile.calTarget = g==="maintain"? r : g==="lose"? Math.max(0,r-500) : r+300;
+  Object.assign(onbData,{bmrManual:true,bmrCustom:r,calGoal:g,calTarget:S.profile.calTarget});
   paintOnb();
+}
+function grabRest(){
+  const r=+((document.getElementById("orest")||{}).value)||0;
+  if(r<800||r>5000){ toast("Check your resting calories","Somewhere between 800 and 5,000."); return; }
+  const g=S.profile.calGoal||"maintain";
+  S.profile.bmrManual=true; S.profile.bmrCustom=r; S.profile.calGoal=g;
+  S.profile.calTarget = g==="maintain"? r : g==="lose"? Math.max(0,r-500) : r+300;
+  Object.assign(onbData,{bmrManual:true,bmrCustom:r,calGoal:g,calTarget:S.profile.calTarget});
+  onbStep++; paintOnb();
 }
 function grabBody(){
   const v=id=>{ const e=document.getElementById(id); return e? +e.value||0 : 0; };
@@ -848,6 +863,9 @@ function finishOnb(){
   S.profile=Object.assign(S.profile,onbData,{name:n,proteinManual:false});
   const t=fuelTargets();
   if(t) S.profile.proteinTarget=t.protein;   // a sane starting point if they ever go manual
+  // Seed the weight log: today's bodyweight is the starting weight.
+  if(!S.weightLog.length && +S.profile.bodyweight>0)
+    S.weightLog=[{date:new Date().toISOString(), w:+S.profile.bodyweight}];
   S.onboarded=true; save();
   route={page:"home",param:null}; paint();
   toast("Welcome, "+n,t?`${t.target.toLocaleString()} kcal · ${t.protein}g protein to start.`:"You're Level 1 across the board. Go earn it.");
@@ -896,7 +914,7 @@ const WIDGETS={
       <div class="tiny" style="margin-top:9px">Add your height and age in Settings to track calories too.</div>`,"fuel");
     const cPct=Math.min(1,m.kcal/(t.target||1));
     return card(`<div class="ctitle">Fuel Today
-        <span style="color:var(--dim2)">${t.model==="training_load"&&t.burn.kcal>0?`+${Math.round(t.burn.kcal)} earned training`:""}</span></div>
+        <span style="color:var(--dim2)">${t.active>0?`+${t.active.toLocaleString()} active burn`:""}</span></div>
       <div class="row" style="margin-bottom:4px">
         <span style="font-size:25px;font-weight:800;letter-spacing:-1px">${Math.round(m.kcal).toLocaleString()}<span style="font-size:14px;color:var(--dim)"> / ${t.target.toLocaleString()}</span></span>
         <span class="tiny">${Math.max(0,Math.round(t.target-m.kcal)).toLocaleString()} left</span></div>
@@ -1381,39 +1399,31 @@ PAGES.fuel=function(){
         <div class="stat" style="background:#101722"><b>${Math.round(m.c)}g</b><span>Carbs</span></div></div>`:""}
     </div>`;
 
-  // The whole point of a hybrid app: today's target is built from today's training.
-  const burn = t ? `<div class="card"><div class="ctitle">Where today's number comes from
-      <span style="color:var(--dim2)">${t.model==="training_load"?"Training load":"Activity level"}</span></div>
-    <div class="lrow"><div class="nm"><b>Resting burn</b><div class="tiny">${t.formula}</div></div>
-      <span class="tiny">${t.bmr.toLocaleString()}</span></div>
-    ${t.model==="training_load"?`
-      <div class="lrow"><div class="nm"><b>Living</b><div class="tiny">${Fuel.NEATNAME[S.profile.neat]||"Desk job"}</div></div>
-        <span class="tiny">+${Math.round(t.bmr*((Fuel.NEAT[S.profile.neat]||1.2)-1)).toLocaleString()}</span></div>
-      ${t.source==="today"?`
-        <div class="lrow"><div class="nm"><b>Running today</b><div class="tiny">${t.burn.runMin?t.burn.runMin+" min logged":"nothing logged"}</div></div>
-          <span class="tiny" style="color:var(--run)">+${Math.round(t.burn.run).toLocaleString()}</span></div>
-        <div class="lrow"><div class="nm"><b>Lifting today</b><div class="tiny">${t.burn.liftMin?t.burn.liftMin+" min logged":"nothing logged"}</div></div>
-          <span class="tiny" style="color:var(--str)">+${Math.round(t.burn.lift).toLocaleString()}</span></div>`
-      :`<div class="lrow"><div class="nm"><b>Training</b>
-          <div class="tiny">${t.source==="average"?"nothing logged yet — using your 7-day average":"nothing logged yet — using your stated activity level"}</div></div>
-          <span class="tiny" style="color:var(--dim)">+${t.exercise.toLocaleString()}</span></div>`}`
-    :`<div class="lrow"><div class="nm"><b>Activity</b><div class="tiny">${Fuel.ACTNAME[S.profile.activity]||"Moderately active"}</div></div>
-        <span class="tiny">×${Fuel.ACT[S.profile.activity]||1.55}</span></div>`}
-    ${t.bfBurn>0?`<div class="lrow"><div class="nm"><b>Breastfeeding</b>
-      <div class="tiny">${bfCountToday()} feed${bfCountToday()===1?"":"s"} today · ${Fuel.BF_KCAL_PER_FEED} kcal each</div></div>
-      <span class="tiny" style="color:var(--hyb)">+${t.bfBurn.toLocaleString()}</span></div>`:""}
-    <div class="lrow"><div class="nm"><b>Total burn</b></div><span class="tiny">${t.tdee.toLocaleString()}</span></div>
-    ${t.adj?`<div class="lrow"><div class="nm"><b>${t.goal==="lose"?"Deficit":"Surplus"}</b>
-      <div class="tiny">${t.rate}% of bodyweight a week</div></div>
-      <span class="tiny" style="color:${t.adj<0?"#e5484d":"var(--hyb)"}">${t.adj>0?"+":""}${t.adj.toLocaleString()}</span></div>`:""}
-    <div class="lrow" style="border-top:1px solid var(--line);margin-top:4px;padding-top:12px">
-      <div class="nm"><b style="font-size:15px">Eat</b></div>
-      <span style="font-weight:800;font-size:16px">${t.target.toLocaleString()}</span></div>
-    ${t.model==="training_load"?`<div class="tiny" style="margin-top:10px;line-height:1.5">
-      ${t.source==="today"
-        ? "This moves with your training. Log a long run and the target goes up with it."
-        : "As soon as you log today's session this switches to what you actually did."}</div>`:""}
-  </div>` : "";
+  // Three numbers, on purpose: what you burn at rest, what you burn being active,
+  // and the number you chose to eat (anchored to resting).
+  const goalLabel = t ? (t.goal==="lose"?"Deficit":t.goal==="gain"?"Bulk":"Maintain") : "";
+  const goalColor = t ? (t.goal==="lose"?"#e5484d":t.goal==="gain"?"var(--hyb)":"var(--dim2)") : "";
+  const cals = t ? `
+    <div class="grid2" style="gap:10px;margin-bottom:12px">
+      <div class="card" style="margin:0"><div class="ctitle">Resting</div>
+        <div style="font-size:25px;font-weight:800;letter-spacing:-1px">${t.resting.toLocaleString()}</div>
+        <div class="tiny" style="margin-top:5px">${t.formula==="Your number"?"your number":"est · "+t.formula}</div></div>
+      <div class="card" style="margin:0"><div class="ctitle">Active / working</div>
+        <div style="font-size:25px;font-weight:800;letter-spacing:-1px;color:var(--str)">+${t.active.toLocaleString()}</div>
+        <div class="tiny" style="margin-top:5px">${(Fuel.NEATNAME[S.profile.neat]||"living")} +${t.neat.toLocaleString()} · training +${t.training.toLocaleString()}</div></div>
+    </div>
+    <div class="card"><div class="ctitle">Your target <span style="color:${goalColor}">${goalLabel}</span></div>
+      <div class="big" style="color:var(--run)">${t.target.toLocaleString()}</div>
+      <div class="tiny" style="margin:6px 0 14px">${(()=>{const eff=t.target-t.bfBurn; return eff<t.resting?`${(t.resting-eff).toLocaleString()} under resting`:eff>t.resting?`${(eff-t.resting).toLocaleString()} over resting`:"right at resting";})()}${t.bfBurn>0?` · +${t.bfBurn.toLocaleString()} breastfeeding`:""}</div>
+      <div class="hstack" style="gap:8px;margin-bottom:12px">
+        ${[["lose","Deficit"],["maintain","Maintain"],["gain","Bulk"]].map(g=>`<button class="opt ${t.goal===g[0]?"sel":""}" style="margin:0;text-align:center;padding:11px 4px" onclick="setGoal('${g[0]}')"><b>${g[1]}</b></button>`).join("")}
+      </div>
+      <div class="row">
+        <label class="lb" style="margin:0">Set exact calories</label>
+        <input class="fld" id="ftgt" type="number" inputmode="numeric" value="${t.base}" style="width:118px;padding:10px;text-align:center" onchange="setTargetCals(this.value)">
+      </div>
+      <div class="tiny" style="margin-top:12px;line-height:1.55">Everything you burn in a day ≈ <b style="color:var(--txt)">${t.tdee.toLocaleString()}</b> (resting + active). Your target is set against <b style="color:var(--txt)">resting</b>, so on a hard training day you'll be eating below what you actually burn.</div>
+    </div>` : "";
 
   const flags = (t&&t.flags.length) ? t.flags.map(f=>`<div class="card" style="border-color:${f.s==="bad"?"#5c2327":"#4a3a1a"};background:${f.s==="bad"?"#1c1113":"#181509"}">
       <div class="row" style="align-items:flex-start;gap:10px">
@@ -1422,7 +1432,7 @@ PAGES.fuel=function(){
       </div></div>`).join("") : "";
 
   return head("Fuel",t?"Calories and protein":"Protein first")
-  + setup + rings + flags + burn
+  + setup + rings + flags + cals + weightCard()
   + `<div class="grid2" style="gap:10px;margin-bottom:12px">
       ${t?`<div class="card" style="margin:0"><div class="ctitle">Calories · 7d</div>
         <div class="spark">${week.map(w=>`<div style="height:${Math.max(4,Math.min(100,(w.kcal/(cGoal||1))*100))}%;background:${w.kcal>=cGoal*.9&&w.kcal<=cGoal*1.1?"var(--run)":"#4a2a17"}"></div>`).join("")}</div>
@@ -1525,6 +1535,85 @@ function bfCard(){
     </div>
     <div class="tiny" style="margin-top:12px;line-height:1.5">Each nursing or pumping session adds about ${Fuel.BF_KCAL_PER_FEED} kcal to today's target. Tap ＋ each time you feed, or set an average at signup.</div>
   </div>`;
+}
+
+/* ---- goal / target (anchored to resting) ---- */
+function setGoal(g){
+  const r=Math.round(Fuel.bmr().v);
+  S.profile.calGoal=g;
+  S.profile.calTarget = g==="maintain"? r : g==="lose"? Math.max(0,r-500) : r+300;
+  save(); repaint();
+}
+function setTargetCals(v){
+  const r=Math.round(Fuel.bmr().v), n=Math.round(+v||0);
+  if(n<=0){ repaint(); return; }
+  S.profile.calTarget=n;
+  S.profile.calGoal = n < r-20 ? "lose" : n > r+20 ? "gain" : "maintain";
+  save(); repaint();
+}
+
+/* ---- weight tracking + trend graph (Fuel tab) ---- */
+function weightCard(){
+  const log=(S.weightLog||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const start=log[0], cur=log[log.length-1];
+  const startW=start?start.w:(+S.profile.bodyweight||0);
+  const curW=cur?cur.w:startW;
+  const delta=+(curW-startW).toFixed(1);
+  const dcol=delta<0?"var(--hyb)":delta>0?"var(--str)":"var(--dim)";
+  const startDate=start?new Date(start.date):null;
+  return `<div class="card"><div class="ctitle">Weight${startDate?` <span style="color:var(--dim2)">since ${startDate.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"2-digit"})}</span>`:""}</div>
+    <div class="grid2" style="gap:10px;margin-bottom:10px">
+      <div class="stat" style="background:#101722"><b>${startW?startW.toLocaleString():"—"}</b><span>Starting lb</span></div>
+      <div class="stat" style="background:#101722"><b style="color:${dcol}">${curW?curW.toLocaleString():"—"}</b><span>Current lb</span></div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <span class="muted" style="font-size:13px">Change from start</span>
+      <span style="font-weight:800;color:${dcol}">${delta>0?"+":""}${delta} lb</span></div>
+    ${weightGraphSVG(log)}
+    <button class="btn g sm" style="margin-top:12px" onclick="logWeightSheet()">Update current weight</button>
+  </div>`;
+}
+function weightGraphSVG(log){
+  if(!log.length) return `<div class="empty" style="padding:12px 0">No weigh-ins yet.</div>`;
+  const W=320,H=118,pad=8,padL=30,padB=16;
+  const ts=log.map(e=>new Date(e.date).getTime());
+  let mn=Math.min.apply(null,log.map(e=>e.w)), mx=Math.max.apply(null,log.map(e=>e.w));
+  if(mx-mn<2){ mn-=1; mx+=1; }
+  const t0=ts[0], t1=ts[ts.length-1], span=Math.max(1,t1-t0);
+  const x=i=> padL+(span?(ts[i]-t0)/span:0)*(W-padL-pad);
+  const y=w=> pad+(1-(w-mn)/(mx-mn))*(H-pad-padB);
+  const start=log[0].w, cur=log[log.length-1].w;
+  const col=cur<start?"#25d366":cur>start?"#3d8bff":"#8b97a8";
+  const by=y(start);
+  const fmtD=d=>d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const pts=log.map((e,i)=>`${x(i).toFixed(1)},${y(e.w).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+    <line x1="${padL}" y1="${by.toFixed(1)}" x2="${W-pad}" y2="${by.toFixed(1)}" stroke="#2a3644" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="${padL-4}" y="${(by+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#5d6878">${Math.round(start)}</text>
+    ${log.length>1?`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`:""}
+    ${log.map((e,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(e.w).toFixed(1)}" r="${i===log.length-1?3.5:2}" fill="${col}"/>`).join("")}
+    <text x="${padL}" y="${H-3}" font-size="9" fill="#5d6878">${fmtD(new Date(log[0].date))}</text>
+    ${log.length>1?`<text x="${W-pad}" y="${H-3}" text-anchor="end" font-size="9" fill="#5d6878">${fmtD(new Date(log[log.length-1].date))}</text>`:""}
+  </svg>`;
+}
+function logWeightSheet(){
+  sheet(`<h3>Update weight</h3>
+    <label class="lb">Current bodyweight (lb)</label>
+    <input class="fld" id="wnew" type="number" inputmode="decimal" value="${+S.profile.bodyweight||""}" style="margin-bottom:6px">
+    <div class="tiny" style="margin:0 0 14px 2px">Logs against today's date. Weigh in around the same time of day for a cleaner trend.</div>
+    <button class="btn p" onclick="applyWeight()">Save weigh-in</button>`,
+    {after:s=>{ const i=s.querySelector("#wnew"); if(i){ i.focus(); i.select&&i.select(); } }});
+}
+function applyWeight(){
+  const w=+gv("wnew")||0;
+  if(w<50||w>800){ toast("Check the weight","Enter it in pounds (50–800)."); return; }
+  const k=todayKey();
+  S.weightLog=S.weightLog||[];
+  const idx=S.weightLog.findIndex(e=>dkey(e.date)===k);
+  if(idx>=0) S.weightLog[idx].w=w; else S.weightLog.push({date:new Date().toISOString(),w});
+  S.profile.bodyweight=w;   // keep the rest of the app in sync
+  save(); closeSheet(); repaint();
+  toast("Weight logged",w+" lb");
 }
 
 /* ---------------- RANKS ---------------- */
@@ -1633,18 +1722,10 @@ function settingsFuel(p){
     ${p.bmrManual?`<label class="lb">Resting calories (BMR) per day</label>
       <input class="fld" id="sbmr" type="number" inputmode="numeric" value="${+p.bmrCustom||(Fuel.ready()?Fuel.bmrAuto():"")}" placeholder="${Fuel.ready()?Fuel.bmrAuto():"1600"}" style="margin-bottom:6px">
       <div class="tiny" style="margin:0 0 12px 2px">The calories you'd burn at complete rest. If you've had this measured (a metabolic test or a wearable you trust), enter it here. The equation still suggests ${Fuel.ready()?Fuel.bmrAuto().toLocaleString():"a value"}.</div>`:""}
-    <label class="lb">How the daily target is built</label>
-    ${sel("smodel",{training_load:"From my logged training",multiplier:"From an activity level"},p.calModel)}
-    ${p.calModel==="multiplier"
-      ? `<label class="lb">Activity level</label>${sel("sact",Fuel.ACTNAME,p.activity)}
-         <div class="tiny" style="margin:-6px 0 12px 2px">${Fuel.ACTDESC[p.activity]||""}</div>`
-      : `<label class="lb">Outside of training, your day is…</label>${sel("sneat",Fuel.NEATNAME,p.neat)}
-         <div class="tiny" style="margin:-6px 0 12px 2px">${Fuel.NEATDESC[p.neat]||""} — runs and lifts are counted separately from your logs.</div>`}
-    <label class="lb">Goal</label>
-    ${sel("sgoal",{lose:"Lose fat",maintain:"Maintain",gain:"Build"},p.calGoal)}
-    ${p.calGoal!=="maintain"?`<label class="lb">Rate — % of bodyweight per week</label>
-      <input class="fld" id="srate" type="number" inputmode="decimal" step="0.05" value="${p.calRate}" style="margin-bottom:6px">
-      <div class="tiny" style="margin:0 0 12px 2px">Capped at ${p.calGoal==="lose"?"1.0% — faster costs muscle and running economy":"0.5% — faster is mostly fat"}.</div>`:""}
+    <label class="lb">Outside of training, your day is…</label>
+    ${sel("sneat",Fuel.NEATNAME,p.neat)}
+    <div class="tiny" style="margin:-6px 0 10px 2px">${Fuel.NEATDESC[p.neat]||""} — this sets your <b style="color:var(--txt)">active / working</b> calories. Runs and lifts you log get added on top.</div>
+    <div class="tiny" style="margin:0 0 12px 2px;line-height:1.5">Your goal — deficit, maintain or bulk — and your exact target calories live on the <b style="color:var(--txt)">Fuel tab</b>, set against your resting number.</div>
     <button class="opt ${p.proteinManual?"sel":""}" onclick="setFuel('proteinManual',${!p.proteinManual})">
       <b>${p.proteinManual?"✓ ":""}Set my own protein target</b><span>${p.proteinManual?"Using your number":"Using the calculated "+(t?t.protein+"g":"target")}</span></button>
     ${p.proteinManual?`<label class="lb">Daily protein target (g)</label>

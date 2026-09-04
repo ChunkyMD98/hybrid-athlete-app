@@ -1,6 +1,6 @@
 /* HYBRID service worker — offline app shell.
    Bump CACHE whenever the shell files change so clients pull the new version. */
-const CACHE = "hybrid-v1";
+const CACHE = "hybrid-v2";
 const SHELL = [
   "./",
   "./index.html",
