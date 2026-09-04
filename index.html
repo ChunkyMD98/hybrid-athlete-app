@@ -669,6 +669,8 @@ function nav(page,param){
     paint();
     window.scrollTo(0,0);
     animating=false;
+    // A pending app update was held back during a workout — apply it now.
+    if(window.__pendingSWReload && page!=="workout"){ location.reload(); }
   }, cur?165:0);
 }
 function repaint(){ // in-place refresh, no fade
@@ -2416,10 +2418,26 @@ window.addEventListener("error",e=>console.warn("HYBRID error:",e.message));
   else { paint(); }
   setTimeout(flushToasts,500);
 })();
-/* Register the service worker so the app installs and works offline.
-   Skipped on file:// (SW needs https or localhost) — kicks in once hosted. */
+/* Register the service worker so the app installs, works offline, and updates
+   itself. When a new version ships, the SW activates and the page reloads once —
+   localStorage (all your progress) is untouched by this. Skipped on file://. */
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW failed",e)); });
+  const hadController = !!navigator.serviceWorker.controller;   // false on first-ever install
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(refreshing || !hadController) return;         // don't reload on the very first install
+    // Never interrupt a live workout — hold the update until they leave it (see nav()).
+    if(route && route.page==="workout" && S.active){
+      window.__pendingSWReload=true;
+      toast("Update ready","Refreshes when you finish this workout.");
+      return;
+    }
+    refreshing=true; location.reload();
+  });
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js").then(reg=>{ if(reg&&reg.update) setInterval(()=>reg.update(),60*60*1000); })
+      .catch(e=>console.warn("SW failed",e));
+  });
 }
 </script>
 </body>
