@@ -418,18 +418,27 @@ const Fuel = {
     return Math.round(resting + (this.GOAL_OFFSET[goal]||0));
   },
 
+  /* The auto figure for active/working calories: non-exercise living (NEAT) plus
+     today's training. Used as the estimate behind the manual override. */
+  activeAuto(){
+    const resting=this.bmr().v;
+    const neat=Math.max(0, resting*((this.NEAT[S.profile.neat]||this.NEAT.desk)-1));
+    return Math.round(neat + this.basis(resting).kcal);
+  },
+
   compute(opts){
     opts=opts||{};
     const p=S.profile, kg=this.kg(), b=this.bmr();
     const resting=b.v;
 
     // Active / working calories: non-exercise living (your job/steps, via NEAT)
-    // plus whatever today's logged training actually cost. Shown on its own —
-    // in this model it is NOT folded into the target.
+    // plus whatever today's logged training actually cost — unless the user has
+    // set their own flat number. Shown on its own; NOT folded into the target.
     const neat=Math.max(0, resting*((this.NEAT[p.neat]||this.NEAT.desk)-1));
     const basis=this.basis(resting);
     const training=basis.kcal;
-    const active=neat+training;
+    const activeManual = !!(p.activeManual && +p.activeCustom>0);
+    const active = activeManual ? +p.activeCustom : (neat+training);
     const tdee=resting+active;               // full daily burn, for reference
 
     const bfBurn=this.breastfeedingBurn();    // milk production rides on top of the target
@@ -457,7 +466,7 @@ const Fuel = {
 
     return {bmr:Math.round(resting), formula:b.f, lbm:b.lbm, bfBurn:Math.round(bfBurn),
             resting:Math.round(resting), neat:Math.round(neat), training:Math.round(training),
-            active:Math.round(active), tdee:Math.round(tdee),
+            active:Math.round(active), activeManual, tdee:Math.round(tdee),
             target:Math.round(target), base:Math.round(base), goal,
             exercise:Math.round(active), estimated:basis.source!=="today", burn:basis.burn, source:basis.source, model:"resting",
             protein:Math.round(protein), fat:Math.round(fat), carbs:Math.round(carbs),
@@ -508,6 +517,7 @@ const blank=()=>({
     activity:"moderate", neat:"desk", calModel:"training_load",
     calGoal:"maintain", calRate:.75, calTarget:0, proteinManual:false,  // calTarget: user-set daily calories (anchored to resting)
     bmrManual:false, bmrCustom:0,               // set-your-own resting calories
+    activeManual:false, activeCustom:0,         // set-your-own active/working calories
     breastfeeding:"", feedsPerDay:0,            // nursing/pumping calorie burn
     usdaKey:""},                                // USDA FoodData Central API key (recipe lookups)
   totals:{miles:0,runs:0,lifts:0,minutes:0},
@@ -1410,9 +1420,9 @@ PAGES.fuel=function(){
       <div class="card" style="margin:0"><div class="ctitle">Resting</div>
         <div style="font-size:25px;font-weight:800;letter-spacing:-1px">${t.resting.toLocaleString()}</div>
         <div class="tiny" style="margin-top:5px">${t.formula==="Your number"?"your number":"est · "+t.formula}</div></div>
-      <div class="card" style="margin:0"><div class="ctitle">Active / working</div>
+      <div class="card tap" style="margin:0;cursor:pointer" onclick="activeSheet()"><div class="ctitle">Active / working ${t.activeManual?`<span style="color:var(--dim2)">yours</span>`:`<span style="color:var(--dim2)">edit ›</span>`}</div>
         <div style="font-size:25px;font-weight:800;letter-spacing:-1px;color:var(--str)">+${t.active.toLocaleString()}</div>
-        <div class="tiny" style="margin-top:5px">${(Fuel.NEATNAME[S.profile.neat]||"living")} +${t.neat.toLocaleString()} · training +${t.training.toLocaleString()}</div></div>
+        <div class="tiny" style="margin-top:5px">${t.activeManual?"your number · tap to change":`${(Fuel.NEATNAME[S.profile.neat]||"living")} +${t.neat.toLocaleString()} · training +${t.training.toLocaleString()}`}</div></div>
     </div>
     <div class="card"><div class="ctitle">Your target <span style="color:${goalColor}">${goalLabel}</span></div>
       <div class="big" style="color:var(--run)">${t.target.toLocaleString()}</div>
@@ -1552,6 +1562,33 @@ function setTargetCals(v){
   S.profile.calTarget=n;
   S.profile.calGoal = n < r-20 ? "lose" : n > r+20 ? "gain" : "maintain";
   save(); repaint();
+}
+
+/* ---- active / working calories: auto, or a flat number you set ---- */
+function activeSheet(){
+  const p=S.profile, auto=Fuel.activeAuto();
+  sheet(`<h3>Active / working calories</h3>
+    <p class="muted" style="margin:0 0 14px;line-height:1.5">What you burn on top of resting — your day and job plus training. Let the app total it from your activity setting and logged workouts, or set your own flat number.</p>
+    <button class="opt ${!p.activeManual?"sel":""}" onclick="setActiveMode(false)"><b>${!p.activeManual?"✓ ":""}Auto</b><span>≈ ${auto.toLocaleString()} kcal from your day + workouts</span></button>
+    <button class="opt ${p.activeManual?"sel":""}" onclick="setActiveMode(true)"><b>${p.activeManual?"✓ ":""}Set my own</b><span>A flat number you decide</span></button>
+    ${p.activeManual?`<label class="lb">Active / working calories a day</label>
+      <input class="fld" id="sactivev" type="number" inputmode="numeric" value="${+p.activeCustom||auto}" placeholder="${auto}" style="margin-bottom:6px">
+      <div class="tiny" style="margin:0 0 12px 2px;line-height:1.5">Replaces the auto total. Your target still sits against <b style="color:var(--txt)">resting</b> — this only changes your active/working number and your full-burn estimate.</div>`:""}
+    <button class="btn p" onclick="saveActive()">Save</button>`);
+}
+function setActiveMode(v){
+  S.profile.activeManual=v;
+  if(v && !(+S.profile.activeCustom>0)) S.profile.activeCustom=Fuel.activeAuto();
+  save(); activeSheet(); repaint();
+}
+function saveActive(){
+  if(S.profile.activeManual){
+    const v=+gv("sactivev")||0;
+    if(v<0||v>8000){ toast("Check that number","Active calories look off."); return; }
+    S.profile.activeCustom=Math.round(v);
+  }
+  save(); closeSheet(); repaint();
+  toast("Saved");
 }
 
 /* ---- weight tracking + trend graph (Fuel tab) ---- */
@@ -1726,7 +1763,12 @@ function settingsFuel(p){
       <div class="tiny" style="margin:0 0 12px 2px">The calories you'd burn at complete rest. If you've had this measured (a metabolic test or a wearable you trust), enter it here. The equation still suggests ${Fuel.ready()?Fuel.bmrAuto().toLocaleString():"a value"}.</div>`:""}
     <label class="lb">Outside of training, your day is…</label>
     ${sel("sneat",Fuel.NEATNAME,p.neat)}
-    <div class="tiny" style="margin:-6px 0 10px 2px">${Fuel.NEATDESC[p.neat]||""} — this sets your <b style="color:var(--txt)">active / working</b> calories. Runs and lifts you log get added on top.</div>
+    <div class="tiny" style="margin:-6px 0 10px 2px">${Fuel.NEATDESC[p.neat]||""} — this feeds your <b style="color:var(--txt)">active / working</b> calories, with logged runs and lifts added on top.</div>
+    <button class="opt ${p.activeManual?"sel":""}" onclick="setFuel('activeManual',${!p.activeManual})">
+      <b>${p.activeManual?"✓ ":""}Set my own active / working calories</b><span>${p.activeManual?"Using your number":"Auto — about "+Fuel.activeAuto().toLocaleString()+" a day"}</span></button>
+    ${p.activeManual?`<label class="lb">Active / working calories a day</label>
+      <input class="fld" id="sactive" type="number" inputmode="numeric" value="${+p.activeCustom||Fuel.activeAuto()}" style="margin-bottom:6px">
+      <div class="tiny" style="margin:0 0 12px 2px;line-height:1.5">A flat number that replaces the auto total. The setting above still applies when this is off.</div>`:""}
     <div class="tiny" style="margin:0 0 12px 2px;line-height:1.5">Your goal — deficit, maintain or bulk — and your exact target calories live on the <b style="color:var(--txt)">Fuel tab</b>, set against your resting number.</div>
     <button class="opt ${p.proteinManual?"sel":""}" onclick="setFuel('proteinManual',${!p.proteinManual})">
       <b>${p.proteinManual?"✓ ":""}Set my own protein target</b><span>${p.proteinManual?"Using your number":"Using the calculated "+(t?t.protein+"g":"target")}</span></button>
@@ -1764,6 +1806,11 @@ function saveFuel(){
     const bmr=n("sbmr");
     if(bmr && (bmr<800||bmr>4000)){ toast("Check your resting calories","A realistic BMR is roughly 800–4,000."); return; }
     p.bmrCustom=bmr;
+  }
+  if(g("sactive")!==null){
+    const av=n("sactive");
+    if(av && (av<0||av>8000)){ toast("Check your active calories"); return; }
+    p.activeCustom=av;
   }
   if(g("sfeeds")!==null) p.feedsPerDay=n("sfeeds");
   save(); repaint();
