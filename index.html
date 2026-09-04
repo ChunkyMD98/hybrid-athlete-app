@@ -354,8 +354,9 @@ const Fuel = {
   // lean mass already carries the difference.
   bmr(){
     const lb=this.lbm();
-    // A manually entered resting burn overrides the equation, but we still
-    // carry lean mass through (from body fat %) so protein and RED-S math hold.
+    // Precedence: today's watch reading > a manual flat number > the equation.
+    const wb=S.burnLog[todayKey()];
+    if(wb && +wb.rest>0) return {v:+wb.rest, f:"Your watch", lbm:lb};
     if(S.profile.bmrManual && +S.profile.bmrCustom>0)
       return {v:+S.profile.bmrCustom, f:"Your number", lbm:lb};
     if(lb!=null) return {v:370+21.6*lb, f:"Katch-McArdle", lbm:lb};
@@ -426,6 +427,15 @@ const Fuel = {
     return Math.round(neat + this.basis(resting).kcal);
   },
 
+  /* Average watch-logged resting/active over the last N days, counting only the
+     days that actually have a value. Powers the 1w / 4w / 3mo trends. */
+  burnAvg(days){
+    let rs=0,rn=0,as=0,an=0;
+    for(let i=0;i<days;i++){ const d=new Date(); d.setDate(d.getDate()-i); const e=S.burnLog[dkey(d)];
+      if(e){ if(+e.rest>0){ rs+=+e.rest; rn++; } if(+e.active>0){ as+=+e.active; an++; } } }
+    return {rest:rn?Math.round(rs/rn):0, active:an?Math.round(as/an):0, restN:rn, activeN:an};
+  },
+
   compute(opts){
     opts=opts||{};
     const p=S.profile, kg=this.kg(), b=this.bmr();
@@ -437,8 +447,13 @@ const Fuel = {
     const neat=Math.max(0, resting*((this.NEAT[p.neat]||this.NEAT.desk)-1));
     const basis=this.basis(resting);
     const training=basis.kcal;
-    const activeManual = !!(p.activeManual && +p.activeCustom>0);
-    const active = activeManual ? +p.activeCustom : (neat+training);
+    // Precedence for active: today's watch reading > a manual flat number > auto.
+    const wb=S.burnLog[todayKey()];
+    let active, activeSource;
+    if(wb && +wb.active>0){ active=+wb.active; activeSource="watch"; }
+    else if(p.activeManual && +p.activeCustom>0){ active=+p.activeCustom; activeSource="manual"; }
+    else { active=neat+training; activeSource="auto"; }
+    const activeManual = activeSource==="manual";
     const tdee=resting+active;               // full daily burn, for reference
 
     const bfBurn=this.breastfeedingBurn();    // milk production rides on top of the target
@@ -466,7 +481,7 @@ const Fuel = {
 
     return {bmr:Math.round(resting), formula:b.f, lbm:b.lbm, bfBurn:Math.round(bfBurn),
             resting:Math.round(resting), neat:Math.round(neat), training:Math.round(training),
-            active:Math.round(active), activeManual, tdee:Math.round(tdee),
+            active:Math.round(active), activeManual, activeSource, tdee:Math.round(tdee),
             target:Math.round(target), base:Math.round(base), goal,
             exercise:Math.round(active), estimated:basis.source!=="today", burn:basis.burn, source:basis.source, model:"resting",
             protein:Math.round(protein), fat:Math.round(fat), carbs:Math.round(carbs),
@@ -525,6 +540,7 @@ const blank=()=>({
   customMoves:[],         // user-built movements: {name,group,sub:[],bw}
   recipes:[],             // saved meals: {id,name,servings,ingredients:[{raw,grams,name,kcal,p,f,c}]}
   weightLog:[],           // body-weight over time: [{date, w}] — first entry is the starting weight
+  burnLog:{},             // watch-reported calories by day: {dkey:{rest, active}}
   runLog:[], liftLog:[], macros:{}, routines:[], layout:DEFAULT_WIDGETS.slice(),
   active:null             // in-progress routine session
 });
@@ -564,6 +580,7 @@ function migrate(d){
   if(!Array.isArray(out.layout)||!out.layout.length) out.layout=DEFAULT_WIDGETS.slice();
   if(!Array.isArray(out.routines)) out.routines=[];
   if(!Array.isArray(out.recipes)) out.recipes=[];
+  if(!out.burnLog || typeof out.burnLog!=="object" || Array.isArray(out.burnLog)) out.burnLog={};
   if(!Array.isArray(out.weightLog)) out.weightLog=[];
   // Existing users with a bodyweight but no history get a starting point today.
   if(d.onboarded && !out.weightLog.length && out.profile.bodyweight>0)
@@ -1417,12 +1434,12 @@ PAGES.fuel=function(){
   const goalColor = t ? (t.goal==="lose"?"#e5484d":t.goal==="gain"?"var(--hyb)":"var(--dim2)") : "";
   const cals = t ? `
     <div class="grid2" style="gap:10px;margin-bottom:12px">
-      <div class="card" style="margin:0"><div class="ctitle">Resting</div>
+      <div class="card tap" style="margin:0;cursor:pointer" onclick="watchBurnSheet()"><div class="ctitle">Resting ${t.formula==="Your watch"?`<span style="color:var(--dim2)">watch</span>`:`<span style="color:var(--dim2)">log ›</span>`}</div>
         <div style="font-size:25px;font-weight:800;letter-spacing:-1px">${t.resting.toLocaleString()}</div>
-        <div class="tiny" style="margin-top:5px">${t.formula==="Your number"?"your number":"est · "+t.formula}</div></div>
-      <div class="card tap" style="margin:0;cursor:pointer" onclick="activeSheet()"><div class="ctitle">Active / working ${t.activeManual?`<span style="color:var(--dim2)">yours</span>`:`<span style="color:var(--dim2)">edit ›</span>`}</div>
+        <div class="tiny" style="margin-top:5px">${t.formula==="Your watch"?"from your watch":t.formula==="Your number"?"your number":"est · "+t.formula}</div></div>
+      <div class="card tap" style="margin:0;cursor:pointer" onclick="${t.activeSource==="watch"?"watchBurnSheet()":"activeSheet()"}"><div class="ctitle">Active / working <span style="color:var(--dim2)">${t.activeSource==="watch"?"watch":t.activeSource==="manual"?"yours":"edit ›"}</span></div>
         <div style="font-size:25px;font-weight:800;letter-spacing:-1px;color:var(--str)">+${t.active.toLocaleString()}</div>
-        <div class="tiny" style="margin-top:5px">${t.activeManual?"your number · tap to change":`${(Fuel.NEATNAME[S.profile.neat]||"living")} +${t.neat.toLocaleString()} · training +${t.training.toLocaleString()}`}</div></div>
+        <div class="tiny" style="margin-top:5px">${t.activeSource==="watch"?"from your watch · tap to change":t.activeSource==="manual"?"your number · tap to change":`${(Fuel.NEATNAME[S.profile.neat]||"living")} +${t.neat.toLocaleString()} · training +${t.training.toLocaleString()}`}</div></div>
     </div>
     <div class="card"><div class="ctitle">Your target <span style="color:${goalColor}">${goalLabel}</span></div>
       <div class="big" style="color:var(--run)">${t.target.toLocaleString()}</div>
@@ -1444,7 +1461,7 @@ PAGES.fuel=function(){
       </div></div>`).join("") : "";
 
   return head("Fuel",t?"Calories and protein":"Protein first")
-  + setup + rings + flags + cals + weightCard()
+  + setup + rings + flags + cals + (t?watchCard():"") + weightCard()
   + `<div class="grid2" style="gap:10px;margin-bottom:12px">
       ${t?`<div class="card" style="margin:0"><div class="ctitle">Calories · 7d</div>
         <div class="spark">${week.map(w=>`<div style="height:${Math.max(4,Math.min(100,(w.kcal/(cGoal||1))*100))}%;background:${w.kcal>=cGoal*.9&&w.kcal<=cGoal*1.1?"var(--run)":"#4a2a17"}"></div>`).join("")}</div>
@@ -1589,6 +1606,49 @@ function saveActive(){
   }
   save(); closeSheet(); repaint();
   toast("Saved");
+}
+
+/* ---- watch calories: daily resting + active from a smartwatch, with trends ---- */
+function watchCard(){
+  const today=S.burnLog[todayKey()]||{};
+  const w=Fuel.burnAvg(7), m=Fuel.burnAvg(28), q=Fuel.burnAvg(90);
+  const cell=v=> v>0? v.toLocaleString() : `<span style="color:var(--dim2)">—</span>`;
+  const tv=(v,lbl)=> v>0? `${lbl} <b style="color:var(--txt)">${v.toLocaleString()}</b>` : `<span style="color:var(--dim2)">${lbl} —</span>`;
+  return `<div class="card"><div class="ctitle">Watch Calories <span style="color:var(--dim2)">Apple Watch · Garmin</span></div>
+    <div class="tiny" style="margin-bottom:12px">TODAY &nbsp; ${tv(+today.rest||0,"Resting")} &nbsp;·&nbsp; ${tv(+today.active||0,"Active")}</div>
+    <div style="display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:7px 6px;align-items:center">
+      <div class="tiny"></div>
+      <div class="tiny" style="text-align:center">1 WK</div><div class="tiny" style="text-align:center">4 WK</div><div class="tiny" style="text-align:center">3 MO</div>
+      <div style="font-size:12px;font-weight:700">Resting</div>
+      <div style="text-align:center;font-weight:700;font-size:14px">${cell(w.rest)}</div><div style="text-align:center;font-weight:700;font-size:14px">${cell(m.rest)}</div><div style="text-align:center;font-weight:700;font-size:14px">${cell(q.rest)}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--str)">Active</div>
+      <div style="text-align:center;font-weight:700;font-size:14px;color:var(--str)">${cell(w.active)}</div><div style="text-align:center;font-weight:700;font-size:14px;color:var(--str)">${cell(m.active)}</div><div style="text-align:center;font-weight:700;font-size:14px;color:var(--str)">${cell(q.active)}</div>
+    </div>
+    <div class="tiny" style="margin:11px 0 0;line-height:1.5">Averages count only the days you logged. Today's logged numbers feed the Resting and Active totals above.</div>
+    <button class="btn g sm" style="margin-top:12px" onclick="watchBurnSheet()">Log today's watch numbers</button>
+  </div>`;
+}
+function watchBurnSheet(){
+  const e=S.burnLog[todayKey()]||{};
+  sheet(`<h3>Log watch calories</h3>
+    <p class="muted" style="margin:0 0 14px;line-height:1.5">Today's numbers from your Apple Watch, Garmin or similar. Either field is optional.</p>
+    <label class="lb">Resting calories (resting energy / BMR)</label>
+    <input class="fld" id="wbr" type="number" inputmode="numeric" value="${+e.rest||""}" placeholder="e.g. 1,720" style="margin-bottom:12px">
+    <label class="lb">Active calories (active / exercise energy)</label>
+    <input class="fld" id="wba" type="number" inputmode="numeric" value="${+e.active||""}" placeholder="e.g. 640" style="margin-bottom:6px">
+    <div class="tiny" style="margin:0 0 14px 2px;line-height:1.5">Today's logged numbers take priority over the estimate/auto values for today, and roll into your 1-week, 4-week and 3-month averages.</div>
+    <button class="btn p" onclick="saveWatchBurn()">Save</button>`,
+    {after:s=>{ const i=s.querySelector("#wbr"); i&&i.focus(); }});
+}
+function saveWatchBurn(){
+  const r=+gv("wbr")||0, a=+gv("wba")||0;
+  if(r && (r<500||r>5000)){ toast("Check resting","A watch resting figure is usually ~1,000–3,000."); return; }
+  if(a && (a<0||a>8000)){ toast("Check active","That active number looks off."); return; }
+  const k=todayKey(), e=S.burnLog[k]=S.burnLog[k]||{};
+  e.rest=r; e.active=a;           // 0 clears that field for today
+  if(!e.rest && !e.active) delete S.burnLog[k];
+  save(); closeSheet(); repaint();
+  toast("Watch calories logged", [r?`Resting ${r.toLocaleString()}`:"", a?`Active ${a.toLocaleString()}`:""].filter(Boolean).join(" · ")||"Cleared");
 }
 
 /* ---- weight tracking + trend graph (Fuel tab) ---- */
